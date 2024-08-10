@@ -9,7 +9,7 @@ services:
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
-      - 3333:3333
+      - 7500:3333
     depends_on:
       postgres:
         condition: service_healthy
@@ -20,6 +20,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: always  # 添加自动重启策略
 
   postgres:
     image: docker.io/library/postgres:15
@@ -32,6 +33,7 @@ services:
       retries: 5
     volumes:
       - postgres:/var/lib/postgresql/data
+    restart: always  # 添加自动重启策略
 
   redis:
     image: docker.io/library/redis:alpine
@@ -43,6 +45,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: always  # 添加自动重启策略
 
 volumes:
   postgres:
