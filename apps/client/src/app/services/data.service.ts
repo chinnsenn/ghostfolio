@@ -36,8 +36,8 @@ import {
   PortfolioHoldingsResponse,
   PortfolioInvestments,
   PortfolioPerformanceResponse,
-  PortfolioPublicDetails,
   PortfolioReport,
+  PublicPortfolioResponse,
   User
 } from '@ghostfolio/common/interfaces';
 import { filterGlobalPermissions } from '@ghostfolio/common/permissions';
@@ -72,13 +72,23 @@ export class DataService {
         ACCOUNT: filtersByAccount,
         ASSET_CLASS: filtersByAssetClass,
         ASSET_SUB_CLASS: filtersByAssetSubClass,
+        DATA_SOURCE: [filterByDataSource] = [],
         HOLDING_TYPE: filtersByHoldingType,
         PRESET_ID: filtersByPresetId,
         SEARCH_QUERY: filtersBySearchQuery,
+        SYMBOL: [filterBySymbol] = [],
         TAG: filtersByTag
       } = groupBy(filters, (filter) => {
         return filter.type;
       });
+
+      if (filterByDataSource) {
+        params = params.append('dataSource', filterByDataSource.id);
+      }
+
+      if (filterBySymbol) {
+        params = params.append('symbol', filterBySymbol.id);
+      }
 
       if (filtersByAccount) {
         params = params.append(
@@ -163,8 +173,10 @@ export class DataService {
     );
   }
 
-  public fetchAccounts() {
-    return this.http.get<Accounts>('/api/v1/account');
+  public fetchAccounts({ filters }: { filters?: Filter[] } = {}) {
+    const params = this.buildFiltersAsQueryParams({ filters });
+
+    return this.http.get<Accounts>('/api/v1/account', { params });
   }
 
   public fetchActivities({
@@ -218,8 +230,8 @@ export class DataService {
   public fetchActivity(aActivityId: string) {
     return this.http.get<Activity>(`/api/v1/order/${aActivityId}`).pipe(
       map((activity) => {
-        activity.createdAt = parseISO(<string>(<unknown>activity.createdAt));
-        activity.date = parseISO(<string>(<unknown>activity.date));
+        activity.createdAt = parseISO(activity.createdAt as unknown as string);
+        activity.date = parseISO(activity.date as unknown as string);
 
         return activity;
       })
@@ -275,7 +287,7 @@ export class DataService {
   }
 
   public deleteActivities({ filters }) {
-    let params = this.buildFiltersAsQueryParams({ filters });
+    const params = this.buildFiltersAsQueryParams({ filters });
 
     return this.http.delete<any>(`/api/v1/order`, { params });
   }
@@ -375,8 +387,8 @@ export class DataService {
         map((data) => {
           if (data.orders) {
             for (const order of data.orders) {
-              order.createdAt = parseISO(<string>(<unknown>order.createdAt));
-              order.date = parseISO(<string>(<unknown>order.date));
+              order.createdAt = parseISO(order.createdAt as unknown as string);
+              order.date = parseISO(order.date as unknown as string);
             }
           }
 
@@ -387,9 +399,9 @@ export class DataService {
 
   public fetchInfo(): InfoItem {
     const info = cloneDeep((window as any).info);
-    const utmSource = <'ios' | 'trusted-web-activity'>(
-      window.localStorage.getItem('utm_source')
-    );
+    const utmSource = window.localStorage.getItem('utm_source') as
+      | 'ios'
+      | 'trusted-web-activity';
 
     info.globalPermissions = filterGlobalPermissions(
       info.globalPermissions,
@@ -599,9 +611,13 @@ export class DataService {
       );
   }
 
-  public fetchPortfolioPublic(aId: string) {
+  public fetchPortfolioReport() {
+    return this.http.get<PortfolioReport>('/api/v1/portfolio/report');
+  }
+
+  public fetchPublicPortfolio(aAccessId: string) {
     return this.http
-      .get<PortfolioPublicDetails>(`/api/v1/portfolio/public/${aId}`)
+      .get<PublicPortfolioResponse>(`/api/v1/public/${aAccessId}/portfolio`)
       .pipe(
         map((response) => {
           if (response.holdings) {
@@ -617,10 +633,6 @@ export class DataService {
           return response;
         })
       );
-  }
-
-  public fetchPortfolioReport() {
-    return this.http.get<PortfolioReport>('/api/v1/portfolio/report');
   }
 
   public loginAnonymous(accessToken: string) {
@@ -703,9 +715,9 @@ export class DataService {
 
   public updateInfo() {
     this.http.get<InfoItem>('/api/v1/info').subscribe((info) => {
-      const utmSource = <'ios' | 'trusted-web-activity'>(
-        window.localStorage.getItem('utm_source')
-      );
+      const utmSource = window.localStorage.getItem('utm_source') as
+        | 'ios'
+        | 'trusted-web-activity';
 
       info.globalPermissions = filterGlobalPermissions(
         info.globalPermissions,

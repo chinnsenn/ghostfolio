@@ -11,7 +11,6 @@ import {
   User
 } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
-import { DateRange } from '@ghostfolio/common/types';
 
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { DeviceDetectorService } from 'ngx-device-detector';
@@ -91,24 +90,6 @@ export class HomeOverviewComponent implements OnDestroy, OnInit {
       });
   }
 
-  public onChangeDateRange(dateRange: DateRange) {
-    this.dataService
-      .putUserSetting({ dateRange })
-      .pipe(takeUntil(this.unsubscribeSubject))
-      .subscribe(() => {
-        this.userService.remove();
-
-        this.userService
-          .get()
-          .pipe(takeUntil(this.unsubscribeSubject))
-          .subscribe((user) => {
-            this.user = user;
-
-            this.changeDetectorRef.markForCheck();
-          });
-      });
-  }
-
   public ngOnDestroy() {
     this.unsubscribeSubject.next();
     this.unsubscribeSubject.complete();
@@ -131,7 +112,7 @@ export class HomeOverviewComponent implements OnDestroy, OnInit {
           ({ date, netPerformanceInPercentageWithCurrencyEffect }) => {
             return {
               date,
-              value: netPerformanceInPercentageWithCurrencyEffect
+              value: netPerformanceInPercentageWithCurrencyEffect * 100
             };
           }
         );

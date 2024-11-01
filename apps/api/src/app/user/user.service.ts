@@ -2,6 +2,14 @@ import { OrderService } from '@ghostfolio/api/app/order/order.service';
 import { SubscriptionService } from '@ghostfolio/api/app/subscription/subscription.service';
 import { environment } from '@ghostfolio/api/environments/environment';
 import { PortfolioChangedEvent } from '@ghostfolio/api/events/portfolio-changed.event';
+import { AccountClusterRiskCurrentInvestment } from '@ghostfolio/api/models/rules/account-cluster-risk/current-investment';
+import { AccountClusterRiskSingleAccount } from '@ghostfolio/api/models/rules/account-cluster-risk/single-account';
+import { CurrencyClusterRiskBaseCurrencyCurrentInvestment } from '@ghostfolio/api/models/rules/currency-cluster-risk/base-currency-current-investment';
+import { CurrencyClusterRiskCurrentInvestment } from '@ghostfolio/api/models/rules/currency-cluster-risk/current-investment';
+import { EconomicMarketClusterRiskDevelopedMarkets } from '@ghostfolio/api/models/rules/economic-market-cluster-risk/developed-markets';
+import { EconomicMarketClusterRiskEmergingMarkets } from '@ghostfolio/api/models/rules/economic-market-cluster-risk/emerging-markets';
+import { EmergencyFundSetup } from '@ghostfolio/api/models/rules/emergency-fund/emergency-fund-setup';
+import { FeeRatioInitialInvestment } from '@ghostfolio/api/models/rules/fees/fee-ratio-initial-investment';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { I18nService } from '@ghostfolio/api/services/i18n/i18n.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
@@ -29,7 +37,7 @@ import { UserWithSettings } from '@ghostfolio/common/types';
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, Role, User } from '@prisma/client';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, subDays } from 'date-fns';
 import { sortBy, without } from 'lodash';
 
 const crypto = require('crypto');
@@ -52,11 +60,18 @@ export class UserService {
     return this.prismaService.user.count(args);
   }
 
+  public createAccessToken(password: string, salt: string): string {
+    const hash = crypto.createHmac('sha512', salt);
+    hash.update(password);
+
+    return hash.digest('hex');
+  }
+
   public async getUser(
     { Account, id, permissions, Settings, subscription }: UserWithSettings,
     aLocale = locale
   ): Promise<IUser> {
-    let [access, firstActivity, tags] = await Promise.all([
+    const userData = await Promise.all([
       this.prismaService.access.findMany({
         include: {
           User: true
@@ -70,8 +85,11 @@ export class UserService {
         },
         where: { userId: id }
       }),
-      this.tagService.getByUser(id)
+      this.tagService.getTagsForUser(id)
     ]);
+    const access = userData[0];
+    const firstActivity = userData[1];
+    let tags = userData[2];
 
     let systemMessage: SystemMessage;
 
@@ -105,8 +123,8 @@ export class UserService {
       accounts: Account,
       dateOfFirstActivity: firstActivity?.date ?? new Date(),
       settings: {
-        ...(<UserSettings>Settings.settings),
-        locale: (<UserSettings>Settings.settings)?.locale ?? aLocale
+        ...(Settings.settings as UserSettings),
+        locale: (Settings.settings as UserSettings)?.locale ?? aLocale
       }
     };
   }
@@ -196,6 +214,48 @@ export class UserService {
     if (!(user.Settings.settings as UserSettings).viewMode) {
       (user.Settings.settings as UserSettings).viewMode = 'DEFAULT';
     }
+
+    (user.Settings.settings as UserSettings).xRayRules = {
+      AccountClusterRiskCurrentInvestment:
+        new AccountClusterRiskCurrentInvestment(undefined, {}).getSettings(
+          user.Settings.settings
+        ),
+      AccountClusterRiskSingleAccount: new AccountClusterRiskSingleAccount(
+        undefined,
+        {}
+      ).getSettings(user.Settings.settings),
+      EconomicMarketClusterRiskDevelopedMarkets:
+        new EconomicMarketClusterRiskDevelopedMarkets(
+          undefined,
+          undefined,
+          undefined
+        ).getSettings(user.Settings.settings),
+      EconomicMarketClusterRiskEmergingMarkets:
+        new EconomicMarketClusterRiskEmergingMarkets(
+          undefined,
+          undefined,
+          undefined
+        ).getSettings(user.Settings.settings),
+      CurrencyClusterRiskBaseCurrencyCurrentInvestment:
+        new CurrencyClusterRiskBaseCurrencyCurrentInvestment(
+          undefined,
+          undefined
+        ).getSettings(user.Settings.settings),
+      CurrencyClusterRiskCurrentInvestment:
+        new CurrencyClusterRiskCurrentInvestment(
+          undefined,
+          undefined
+        ).getSettings(user.Settings.settings),
+      EmergencyFundSetup: new EmergencyFundSetup(
+        undefined,
+        undefined
+      ).getSettings(user.Settings.settings),
+      FeeRatioInitialInvestment: new FeeRatioInitialInvestment(
+        undefined,
+        undefined,
+        undefined
+      ).getSettings(user.Settings.settings)
+    };
 
     let currentPermissions = getPermissions(user.role);
 
@@ -305,13 +365,6 @@ export class UserService {
     });
   }
 
-  public createAccessToken(password: string, salt: string): string {
-    const hash = crypto.createHmac('sha512', salt);
-    hash.update(password);
-
-    return hash.digest('hex');
-  }
-
   public async createUser({
     data
   }: {
@@ -359,7 +412,7 @@ export class UserService {
 
       const hashedAccessToken = this.createAccessToken(
         accessToken,
-        process.env.ACCESS_TOKEN_SALT
+        this.configurationService.get('ACCESS_TOKEN_SALT')
       );
 
       user = await this.prismaService.user.update({
@@ -371,17 +424,6 @@ export class UserService {
     }
 
     return user;
-  }
-
-  public async updateUser(params: {
-    where: Prisma.UserWhereUniqueInput;
-    data: Prisma.UserUpdateInput;
-  }): Promise<User> {
-    const { where, data } = params;
-    return this.prismaService.user.update({
-      data,
-      where
-    });
   }
 
   public async deleteUser(where: Prisma.UserWhereUniqueInput): Promise<User> {
@@ -420,10 +462,38 @@ export class UserService {
     });
   }
 
+  public async resetAnalytics() {
+    return this.prismaService.analytics.updateMany({
+      data: {
+        dataProviderGhostfolioDailyRequests: 0
+      },
+      where: {
+        updatedAt: {
+          gte: subDays(new Date(), 1)
+        }
+      }
+    });
+  }
+
+  public async updateUser({
+    data,
+    where
+  }: {
+    data: Prisma.UserUpdateInput;
+    where: Prisma.UserWhereUniqueInput;
+  }): Promise<User> {
+    return this.prismaService.user.update({
+      data,
+      where
+    });
+  }
+
   public async updateUserSetting({
+    emitPortfolioChangedEvent,
     userId,
     userSettings
   }: {
+    emitPortfolioChangedEvent: boolean;
     userId: string;
     userSettings: UserSettings;
   }) {
@@ -444,12 +514,14 @@ export class UserService {
       }
     });
 
-    this.eventEmitter.emit(
-      PortfolioChangedEvent.getName(),
-      new PortfolioChangedEvent({
-        userId
-      })
-    );
+    if (emitPortfolioChangedEvent) {
+      this.eventEmitter.emit(
+        PortfolioChangedEvent.getName(),
+        new PortfolioChangedEvent({
+          userId
+        })
+      );
+    }
 
     return settings;
   }

@@ -45,6 +45,15 @@ export const personalFinanceTools: Product[] = [
     slogan: 'Analyze and track your portfolio.'
   },
   {
+    hasFreePlan: false,
+    hasSelfHostingAbility: true,
+    key: 'banktivity',
+    name: 'Banktivity',
+    origin: 'United States',
+    pricingPerYear: '$59.99',
+    slogan: 'Proactive money management app for macOS & iOS'
+  },
+  {
     founded: 2022,
     hasFreePlan: true,
     hasSelfHostingAbility: false,
@@ -61,6 +70,28 @@ export const personalFinanceTools: Product[] = [
     origin: 'France',
     pricingPerYear: '$100',
     slogan: 'Stock Portfolio Tracker for Smart Investors'
+  },
+  {
+    founded: 2007,
+    hasFreePlan: false,
+    hasSelfHostingAbility: false,
+    key: 'buxfer',
+    name: 'Buxfer',
+    origin: 'United States',
+    pricingPerYear: '$48',
+    regions: ['Global'],
+    slogan: 'Take control of your financial future'
+  },
+  {
+    founded: 2013,
+    hasFreePlan: true,
+    hasSelfHostingAbility: false,
+    key: 'cointracking',
+    languages: ['Deutsch', 'English'],
+    name: 'CoinTracking',
+    origin: 'Germany',
+    pricingPerYear: '$120',
+    slogan: 'The leading Crypto Portfolio Tracker & Tax Calculator'
   },
   {
     founded: 2022,
@@ -84,6 +115,7 @@ export const personalFinanceTools: Product[] = [
   },
   {
     founded: 2022,
+    isArchived: true,
     key: 'capmon',
     name: 'CapMon.org',
     origin: 'Germany',
@@ -153,6 +185,14 @@ export const personalFinanceTools: Product[] = [
     slogan: 'Portfolio Tracker Designed by Professional Investors'
   },
   {
+    founded: 2010,
+    hasFreePlan: false,
+    key: 'etops',
+    name: 'etops',
+    origin: 'Switzerland',
+    slogan: 'Your financial superpower'
+  },
+  {
     founded: 2020,
     hasFreePlan: true,
     hasSelfHostingAbility: false,
@@ -174,12 +214,33 @@ export const personalFinanceTools: Product[] = [
     slogan: 'Flexible Financial Management'
   },
   {
+    founded: 2023,
+    hasFreePlan: true,
+    hasSelfHostingAbility: false,
+    key: 'finanzfluss-copilot',
+    name: 'Finanzfluss Copilot',
+    origin: 'Germany',
+    pricingPerYear: '€69.99',
+    slogan: 'Portfolio Tracker für dein Vermögen'
+  },
+  {
     founded: 2020,
     key: 'finary',
     languages: ['Deutsch', 'English', 'Français'],
     name: 'Finary',
     origin: 'United States',
     slogan: 'Real-Time Portfolio Tracker & Stock Tracker'
+  },
+  {
+    founded: 2021,
+    hasFreePlan: true,
+    hasSelfHostingAbility: false,
+    key: 'finateka',
+    languages: ['English'],
+    name: 'FINATEKA',
+    origin: 'United States',
+    slogan:
+      'The most convenient mobile application for personal finance accounting'
   },
   {
     founded: 2023,
@@ -189,6 +250,17 @@ export const personalFinanceTools: Product[] = [
     origin: 'South Africa',
     pricingPerYear: '€69.99',
     slogan: 'Personal finances, simplified'
+  },
+  {
+    founded: 2021,
+    hasFreePlan: true,
+    hasSelfHostingAbility: false,
+    key: 'firekit',
+    languages: ['English', 'українська мова'],
+    name: 'FIREkit',
+    origin: 'Ukraine',
+    pricingPerYear: '$40',
+    slogan: 'A simple solution to track your wealth online'
   },
   {
     hasFreePlan: true,
@@ -232,12 +304,21 @@ export const personalFinanceTools: Product[] = [
   {
     hasFreePlan: true,
     hasSelfHostingAbility: false,
+    isArchived: true,
     key: 'intuit-mint',
     name: 'Intuit Mint',
     note: 'Intuit Mint was discontinued in 2023',
     origin: 'United States',
     pricingPerYear: '$60',
     slogan: 'Managing money, made simple'
+  },
+  {
+    hasFreePlan: true,
+    hasSelfHostingAbility: false,
+    key: 'investify',
+    name: 'Investify',
+    origin: 'Pakistan',
+    slogan: 'Advanced portfolio tracking and stock market information'
   },
   {
     founded: 2011,
@@ -270,6 +351,15 @@ export const personalFinanceTools: Product[] = [
     slogan: 'The Time Machine for your Net Worth'
   },
   {
+    founded: 2021,
+    hasFreePlan: false,
+    key: 'leafs',
+    languages: ['Deutsch', 'English'],
+    name: 'Leafs',
+    origin: 'Switzerland',
+    slogan: 'Sustainability insights for wealth managers'
+  },
+  {
     founded: 2018,
     hasFreePlan: false,
     hasSelfHostingAbility: false,
@@ -292,8 +382,16 @@ export const personalFinanceTools: Product[] = [
     slogan: 'Track your investments'
   },
   {
+    founded: 2010,
+    key: 'masttro',
+    name: 'Masttro',
+    origin: 'United States',
+    slogan: 'Your platform for wealth in full view'
+  },
+  {
     founded: 2021,
     hasSelfHostingAbility: false,
+    isArchived: true,
     key: 'maybe-finance',
     languages: ['English'],
     name: 'Maybe Finance',
@@ -315,6 +413,15 @@ export const personalFinanceTools: Product[] = [
     slogan: 'The smartest way to track your crypto'
   },
   {
+    founded: 1991,
+    hasSelfHostingAbility: true,
+    isArchived: true,
+    key: 'microsoft-money',
+    name: 'Microsoft Money',
+    note: 'Microsoft Money was discontinued in 2010',
+    origin: 'United States'
+  },
+  {
     founded: 2019,
     hasFreePlan: false,
     hasSelfHostingAbility: false,
@@ -323,6 +430,16 @@ export const personalFinanceTools: Product[] = [
     origin: 'United States',
     pricingPerYear: '$99.99',
     slogan: 'The modern way to manage your money'
+  },
+  {
+    founded: 1999,
+    hasFreePlan: false,
+    hasSelfHostingAbility: true,
+    key: 'moneydance',
+    name: 'Moneydance',
+    origin: 'Scotland',
+    pricingPerYear: '$100',
+    slogan: 'Personal Finance Manager for Mac, Windows, and Linux'
   },
   {
     hasFreePlan: false,
@@ -353,6 +470,17 @@ export const personalFinanceTools: Product[] = [
     pricingPerYear: '€88',
     regions: ['Austria', 'Germany', 'Switzerland'],
     slogan: 'Dein Vermögen immer im Blick'
+  },
+  {
+    founded: 2023,
+    hasFreePlan: true,
+    hasSelfHostingAbility: false,
+    key: 'plainzer',
+    languages: ['English'],
+    name: 'Plainzer',
+    origin: 'Poland',
+    pricingPerYear: '$74',
+    slogan: 'Free dividend tracker for your portfolio'
   },
   {
     founded: 2023,
@@ -395,6 +523,7 @@ export const personalFinanceTools: Product[] = [
   },
   {
     hasFreePlan: true,
+    isArchived: true,
     key: 'portfoloo',
     name: 'Portfoloo',
     note: 'Portfoloo was discontinued',
@@ -431,6 +560,16 @@ export const personalFinanceTools: Product[] = [
     slogan: 'Track your net worth'
   },
   {
+    founded: 2019,
+    hasSelfHostingAbility: false,
+    isArchived: true,
+    key: 'sarmaaya.pk',
+    name: 'Sarmaaya.pk Portfolio Tracking',
+    note: 'Sarmaaya.pk Portfolio Tracking was discontinued in 2024',
+    origin: 'Pakistan',
+    slogan: 'Unified platform for financial research and portfolio tracking'
+  },
+  {
     founded: 2004,
     hasFreePlan: false,
     hasSelfHostingAbility: false,
@@ -460,6 +599,7 @@ export const personalFinanceTools: Product[] = [
   },
   {
     hasFreePlan: true,
+    isArchived: true,
     key: 'sharesmaster',
     name: 'SharesMaster',
     note: 'SharesMaster was discontinued',
@@ -500,6 +640,7 @@ export const personalFinanceTools: Product[] = [
   },
   {
     founded: 2008,
+    isArchived: true,
     key: 'stockmarketeye',
     name: 'StockMarketEye',
     origin: 'France',
@@ -565,10 +706,13 @@ export const personalFinanceTools: Product[] = [
     slogan: 'Make Smarter Investments'
   },
   {
+    founded: 2024,
     hasSelfHostingAbility: true,
+    isArchived: true,
     key: 'wealthfolio',
     languages: ['English'],
     name: 'Wealthfolio',
+    origin: 'Canada',
     slogan: 'Desktop Investment Tracker'
   },
   {
@@ -581,6 +725,14 @@ export const personalFinanceTools: Product[] = [
     origin: 'Canada',
     pricingPerYear: '$50',
     slogan: 'See all your investments in one place'
+  },
+  {
+    founded: 2018,
+    hasFreePlan: true,
+    key: 'wealthposition',
+    name: 'WealthPosition',
+    pricingPerYear: '$60',
+    slogan: 'Personal Finance & Budgeting App'
   },
   {
     founded: 2018,
@@ -601,6 +753,7 @@ export const personalFinanceTools: Product[] = [
     founded: 2021,
     hasFreePlan: true,
     hasSelfHostingAbility: false,
+    isArchived: true,
     key: 'yeekatee',
     languages: ['Deutsch', 'English', 'Español', 'Français', 'Italiano'],
     name: 'yeekatee',
@@ -618,5 +771,15 @@ export const personalFinanceTools: Product[] = [
     origin: 'United States',
     pricingPerYear: '$99',
     slogan: 'Change Your Relationship With Money'
+  },
+  {
+    founded: 2019,
+    hasFreePlan: false,
+    hasSelfHostingAbility: false,
+    key: 'ziggma',
+    name: 'Ziggma',
+    origin: 'United States',
+    pricingPerYear: '$90',
+    slogan: 'Your solution for investing success'
   }
 ];

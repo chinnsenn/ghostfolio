@@ -125,8 +125,15 @@
           }
         </h4>
         <gf-rules
-          [hasPermissionToCreateOrder]="hasPermissionToCreateOrder"
+          [hasPermissionToUpdateUserSettings]="
+            !hasImpersonationId &&
+            hasPermissionToUpdateUserSettings &&
+            user?.settings?.isExperimentalFeatures
+          "
+          [isLoading]="isLoadingPortfolioReport"
           [rules]="emergencyFundRules"
+          [settings]="user?.settings?.xRayRules"
+          (rulesUpdated)="onRulesUpdated($event)"
         />
       </div>
       <div class="mb-4">
@@ -137,8 +144,15 @@
           }
         </h4>
         <gf-rules
-          [hasPermissionToCreateOrder]="hasPermissionToCreateOrder"
+          [hasPermissionToUpdateUserSettings]="
+            !hasImpersonationId &&
+            hasPermissionToUpdateUserSettings &&
+            user?.settings?.isExperimentalFeatures
+          "
+          [isLoading]="isLoadingPortfolioReport"
           [rules]="currencyClusterRiskRules"
+          [settings]="user?.settings?.xRayRules"
+          (rulesUpdated)="onRulesUpdated($event)"
         />
       </div>
       <div class="mb-4">
@@ -149,11 +163,37 @@
           }
         </h4>
         <gf-rules
-          [hasPermissionToCreateOrder]="hasPermissionToCreateOrder"
+          [hasPermissionToUpdateUserSettings]="
+            !hasImpersonationId &&
+            hasPermissionToUpdateUserSettings &&
+            user?.settings?.isExperimentalFeatures
+          "
+          [isLoading]="isLoadingPortfolioReport"
           [rules]="accountClusterRiskRules"
+          [settings]="user?.settings?.xRayRules"
+          (rulesUpdated)="onRulesUpdated($event)"
         />
       </div>
-      <div>
+      <div class="mb-4">
+        <h4 class="align-items-center d-flex m-0">
+          <span i18n>Economic Market Cluster Risks</span>
+          @if (user?.subscription?.type === 'Basic') {
+            <gf-premium-indicator class="ml-1" />
+          }
+        </h4>
+        <gf-rules
+          [hasPermissionToUpdateUserSettings]="
+            !hasImpersonationId &&
+            hasPermissionToUpdateUserSettings &&
+            user?.settings?.isExperimentalFeatures
+          "
+          [isLoading]="isLoadingPortfolioReport"
+          [rules]="economicMarketClusterRiskRules"
+          [settings]="user?.settings?.xRayRules"
+          (rulesUpdated)="onRulesUpdated($event)"
+        />
+      </div>
+      <div class="mb-4">
         <h4 class="align-items-center d-flex m-0">
           <span i18n>Fees</span>
           @if (user?.subscription?.type === 'Basic') {
@@ -161,10 +201,33 @@
           }
         </h4>
         <gf-rules
-          [hasPermissionToCreateOrder]="hasPermissionToCreateOrder"
+          [hasPermissionToUpdateUserSettings]="
+            !hasImpersonationId &&
+            hasPermissionToUpdateUserSettings &&
+            user?.settings?.isExperimentalFeatures
+          "
+          [isLoading]="isLoadingPortfolioReport"
           [rules]="feeRules"
+          [settings]="user?.settings?.xRayRules"
+          (rulesUpdated)="onRulesUpdated($event)"
         />
       </div>
+      @if (inactiveRules?.length > 0) {
+        <div>
+          <h4 class="m-0" i18n>Inactive</h4>
+          <gf-rules
+            [hasPermissionToUpdateUserSettings]="
+              !hasImpersonationId &&
+              hasPermissionToUpdateUserSettings &&
+              user?.settings?.isExperimentalFeatures
+            "
+            [isLoading]="isLoadingPortfolioReport"
+            [rules]="inactiveRules"
+            [settings]="user?.settings?.xRayRules"
+            (rulesUpdated)="onRulesUpdated($event)"
+          />
+        </div>
+      }
     </div>
   </div>
 </div>

@@ -1,6 +1,7 @@
 import { UpdateUserSettingDto } from '@ghostfolio/api/app/user/update-user-setting.dto';
 import { LoginWithAccessTokenDialog } from '@ghostfolio/client/components/login-with-access-token-dialog/login-with-access-token-dialog.component';
 import { LayoutService } from '@ghostfolio/client/core/layout.service';
+import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
 import { DataService } from '@ghostfolio/client/services/data.service';
 import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import {
@@ -55,6 +56,8 @@ export class HeaderComponent implements OnChanges {
 
   @Input() currentRoute: string;
   @Input() deviceType: string;
+  @Input() hasPermissionToChangeDateRange: boolean;
+  @Input() hasPermissionToChangeFilters: boolean;
   @Input() hasTabs: boolean;
   @Input() info: InfoItem;
   @Input() pageTitle: string;
@@ -74,17 +77,17 @@ export class HeaderComponent implements OnChanges {
   public hasPermissionToCreateUser: boolean;
   public impersonationId: string;
   public isMenuOpen: boolean;
-  public routeAbout = $localize`about`;
-  public routeFeatures = $localize`features`;
-  public routeMarkets = $localize`markets`;
-  public routePricing = $localize`pricing`;
-  public routeResources = $localize`resources`;
-  public routerLinkAbout = ['/' + $localize`about`];
-  public routerLinkFeatures = ['/' + $localize`features`];
-  public routerLinkMarkets = ['/' + $localize`markets`];
-  public routerLinkPricing = ['/' + $localize`pricing`];
-  public routerLinkRegister = ['/' + $localize`register`];
-  public routerLinkResources = ['/' + $localize`resources`];
+  public routeAbout = $localize`:snake-case:about`;
+  public routeFeatures = $localize`:snake-case:features`;
+  public routeMarkets = $localize`:snake-case:markets`;
+  public routePricing = $localize`:snake-case:pricing`;
+  public routeResources = $localize`:snake-case:resources`;
+  public routerLinkAbout = ['/' + $localize`:snake-case:about`];
+  public routerLinkFeatures = ['/' + $localize`:snake-case:features`];
+  public routerLinkMarkets = ['/' + $localize`:snake-case:markets`];
+  public routerLinkPricing = ['/' + $localize`:snake-case:pricing`];
+  public routerLinkRegister = ['/' + $localize`:snake-case:register`];
+  public routerLinkResources = ['/' + $localize`:snake-case:resources`];
 
   private unsubscribeSubject = new Subject<void>();
 
@@ -93,6 +96,7 @@ export class HeaderComponent implements OnChanges {
     private dialog: MatDialog,
     private impersonationStorageService: ImpersonationStorageService,
     private layoutService: LayoutService,
+    private notificationService: NotificationService,
     private router: Router,
     private settingsStorageService: SettingsStorageService,
     private tokenStorageService: TokenStorageService,
@@ -159,10 +163,8 @@ export class HeaderComponent implements OnChanges {
       .putUserSetting({ dateRange })
       .pipe(takeUntil(this.unsubscribeSubject))
       .subscribe(() => {
-        this.userService.remove();
-
         this.userService
-          .get()
+          .get(true)
           .pipe(takeUntil(this.unsubscribeSubject))
           .subscribe();
       });
@@ -189,17 +191,15 @@ export class HeaderComponent implements OnChanges {
       .putUserSetting(userSetting)
       .pipe(takeUntil(this.unsubscribeSubject))
       .subscribe(() => {
-        this.userService.remove();
-
         this.userService
-          .get()
+          .get(true)
           .pipe(takeUntil(this.unsubscribeSubject))
           .subscribe();
       });
   }
 
   public onLogoClick() {
-    if (this.currentRoute === 'home' || this.currentRoute === 'zen') {
+    if (['home', 'zen'].includes(this.currentRoute)) {
       this.layoutService.getShouldReloadSubject().next();
     }
   }
@@ -240,7 +240,9 @@ export class HeaderComponent implements OnChanges {
             .loginAnonymous(data?.accessToken)
             .pipe(
               catchError(() => {
-                alert($localize`Oops! Incorrect Security Token.`);
+                this.notificationService.alert({
+                  title: $localize`Oops! Incorrect Security Token.`
+                });
 
                 return EMPTY;
               }),
@@ -259,7 +261,18 @@ export class HeaderComponent implements OnChanges {
       this.settingsStorageService.getSetting(KEY_STAY_SIGNED_IN) === 'true'
     );
 
-    this.router.navigate(['/']);
+    this.userService
+      .get()
+      .pipe(takeUntil(this.unsubscribeSubject))
+      .subscribe((user) => {
+        const userLanguage = user?.settings?.language;
+
+        if (userLanguage && document.documentElement.lang !== userLanguage) {
+          window.location.href = `../${userLanguage}`;
+        } else {
+          this.router.navigate(['/']);
+        }
+      });
   }
 
   public ngOnDestroy() {

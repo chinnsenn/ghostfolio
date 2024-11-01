@@ -4,21 +4,18 @@ import { UserService } from '@ghostfolio/client/services/user/user.service';
 import {
   AssetProfileIdentifier,
   PortfolioPosition,
+  ToggleOption,
   User
 } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
-import {
-  HoldingType,
-  HoldingsViewMode,
-  ToggleOption
-} from '@ghostfolio/common/types';
+import { HoldingType, HoldingsViewMode } from '@ghostfolio/common/types';
 
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { Router } from '@angular/router';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { Subject } from 'rxjs';
-import { skip, takeUntil } from 'rxjs/operators';
+import { takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'gf-home-holdings',
@@ -87,17 +84,20 @@ export class HomeHoldingsComponent implements OnDestroy, OnInit {
       });
 
     this.viewModeFormControl.valueChanges
-      .pipe(
-        // Skip inizialization: "new FormControl"
-        skip(1),
-        takeUntil(this.unsubscribeSubject)
-      )
+      .pipe(takeUntil(this.unsubscribeSubject))
       .subscribe((holdingsViewMode) => {
         this.dataService
           .putUserSetting({ holdingsViewMode })
           .pipe(takeUntil(this.unsubscribeSubject))
           .subscribe(() => {
-            this.userService.remove();
+            this.userService
+              .get(true)
+              .pipe(takeUntil(this.unsubscribeSubject))
+              .subscribe((user) => {
+                this.user = user;
+
+                this.changeDetectorRef.markForCheck();
+              });
           });
       });
   }
@@ -108,7 +108,7 @@ export class HomeHoldingsComponent implements OnDestroy, OnInit {
     this.initialize();
   }
 
-  public onSymbolClicked({ dataSource, symbol }: AssetProfileIdentifier) {
+  public onHoldingClicked({ dataSource, symbol }: AssetProfileIdentifier) {
     if (dataSource && symbol) {
       this.router.navigate([], {
         queryParams: { dataSource, symbol, holdingDetailDialog: true }
@@ -135,7 +135,7 @@ export class HomeHoldingsComponent implements OnDestroy, OnInit {
   }
 
   private initialize() {
-    this.viewModeFormControl.disable();
+    this.viewModeFormControl.disable({ emitEvent: false });
 
     if (
       this.hasPermissionToAccessHoldingsChart &&

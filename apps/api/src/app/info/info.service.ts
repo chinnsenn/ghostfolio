@@ -5,7 +5,6 @@ import { UserService } from '@ghostfolio/api/app/user/user.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { PropertyService } from '@ghostfolio/api/services/property/property.service';
-import { TagService } from '@ghostfolio/api/services/tag/tag.service';
 import {
   DEFAULT_CURRENCY,
   PROPERTY_BETTER_UPTIME_MONITOR_ID,
@@ -47,16 +46,12 @@ export class InfoService {
     private readonly platformService: PlatformService,
     private readonly propertyService: PropertyService,
     private readonly redisCacheService: RedisCacheService,
-    private readonly tagService: TagService,
     private readonly userService: UserService
   ) {}
 
   public async get(): Promise<InfoItem> {
     const info: Partial<InfoItem> = {};
     let isReadOnlyMode: boolean;
-    const platforms = await this.platformService.getPlatforms({
-      orderBy: { name: 'asc' }
-    });
 
     const globalPermissions: string[] = [];
 
@@ -100,21 +95,27 @@ export class InfoService {
       globalPermissions.push(permissions.enableSystemMessage);
     }
 
-    const isUserSignupEnabled =
-      await this.propertyService.isUserSignupEnabled();
+    const [
+      benchmarks,
+      demoAuthToken,
+      isUserSignupEnabled,
+      platforms,
+      statistics,
+      subscriptions
+    ] = await Promise.all([
+      this.benchmarkService.getBenchmarkAssetProfiles(),
+      this.getDemoAuthToken(),
+      this.propertyService.isUserSignupEnabled(),
+      this.platformService.getPlatforms({
+        orderBy: { name: 'asc' }
+      }),
+      this.getStatistics(),
+      this.getSubscriptions()
+    ]);
 
     if (isUserSignupEnabled) {
       globalPermissions.push(permissions.createUserAccount);
     }
-
-    const [benchmarks, demoAuthToken, statistics, subscriptions, tags] =
-      await Promise.all([
-        this.benchmarkService.getBenchmarkAssetProfiles(),
-        this.getDemoAuthToken(),
-        this.getStatistics(),
-        this.getSubscriptions(),
-        this.tagService.get()
-      ]);
 
     return {
       ...info,
@@ -125,7 +126,6 @@ export class InfoService {
       platforms,
       statistics,
       subscriptions,
-      tags,
       baseCurrency: DEFAULT_CURRENCY,
       currencies: this.exchangeRateDataService.getCurrencies()
     };

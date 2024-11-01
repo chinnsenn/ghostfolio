@@ -1,3 +1,5 @@
+import { ConfirmationDialogType } from '@ghostfolio/client/core/notification/confirmation-dialog/confirmation-dialog.type';
+import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
 import { getLocale } from '@ghostfolio/common/helper';
 
 import {
@@ -7,7 +9,6 @@ import {
   Input,
   OnChanges,
   OnDestroy,
-  OnInit,
   Output,
   ViewChild
 } from '@angular/core';
@@ -24,7 +25,7 @@ import { Subject, Subscription } from 'rxjs';
   templateUrl: './accounts-table.component.html',
   styleUrls: ['./accounts-table.component.scss']
 })
-export class AccountsTableComponent implements OnChanges, OnDestroy, OnInit {
+export class AccountsTableComponent implements OnChanges, OnDestroy {
   @Input() accounts: AccountModel[];
   @Input() baseCurrency: string;
   @Input() deviceType: string;
@@ -46,17 +47,17 @@ export class AccountsTableComponent implements OnChanges, OnDestroy, OnInit {
 
   @ViewChild(MatSort) sort: MatSort;
 
-  public dataSource: MatTableDataSource<AccountModel> =
-    new MatTableDataSource();
+  public dataSource = new MatTableDataSource<AccountModel>();
   public displayedColumns = [];
   public isLoading = true;
   public routeQueryParams: Subscription;
 
   private unsubscribeSubject = new Subject<void>();
 
-  public constructor(private router: Router) {}
-
-  public ngOnInit() {}
+  public constructor(
+    private notificationService: NotificationService,
+    private router: Router
+  ) {}
 
   public ngOnChanges() {
     this.displayedColumns = ['status', 'account', 'platform'];
@@ -87,23 +88,23 @@ export class AccountsTableComponent implements OnChanges, OnDestroy, OnInit {
 
     this.isLoading = true;
 
-    if (this.accounts) {
-      this.dataSource = new MatTableDataSource(this.accounts);
-      this.dataSource.sort = this.sort;
-      this.dataSource.sortingDataAccessor = get;
+    this.dataSource = new MatTableDataSource(this.accounts);
+    this.dataSource.sort = this.sort;
+    this.dataSource.sortingDataAccessor = get;
 
+    if (this.accounts) {
       this.isLoading = false;
     }
   }
 
   public onDeleteAccount(aId: string) {
-    const confirmation = confirm(
-      $localize`Do you really want to delete this account?`
-    );
-
-    if (confirmation) {
-      this.accountDeleted.emit(aId);
-    }
+    this.notificationService.confirm({
+      confirmFn: () => {
+        this.accountDeleted.emit(aId);
+      },
+      confirmType: ConfirmationDialogType.Warn,
+      title: $localize`Do you really want to delete this account?`
+    });
   }
 
   public onOpenAccountDetailDialog(accountId: string) {
@@ -115,7 +116,9 @@ export class AccountsTableComponent implements OnChanges, OnDestroy, OnInit {
   }
 
   public onOpenComment(aComment: string) {
-    alert(aComment);
+    this.notificationService.alert({
+      title: aComment
+    });
   }
 
   public onTransferBalance() {

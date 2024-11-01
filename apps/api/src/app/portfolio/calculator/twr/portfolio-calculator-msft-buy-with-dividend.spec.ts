@@ -15,9 +15,12 @@ import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cac
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { ExchangeRateDataServiceMock } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service.mock';
+import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
+import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
 
 import { Big } from 'big.js';
+import { last } from 'lodash';
 
 jest.mock('@ghostfolio/api/app/portfolio/current-rate.service', () => {
   return {
@@ -27,6 +30,18 @@ jest.mock('@ghostfolio/api/app/portfolio/current-rate.service', () => {
     })
   };
 });
+
+jest.mock(
+  '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service',
+  () => {
+    return {
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      PortfolioSnapshotService: jest.fn().mockImplementation(() => {
+        return PortfolioSnapshotServiceMock;
+      })
+    };
+  }
+);
 
 jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
   return {
@@ -53,7 +68,8 @@ describe('PortfolioCalculator', () => {
   let configurationService: ConfigurationService;
   let currentRateService: CurrentRateService;
   let exchangeRateDataService: ExchangeRateDataService;
-  let factory: PortfolioCalculatorFactory;
+  let portfolioCalculatorFactory: PortfolioCalculatorFactory;
+  let portfolioSnapshotService: PortfolioSnapshotService;
   let redisCacheService: RedisCacheService;
 
   beforeEach(() => {
@@ -68,21 +84,22 @@ describe('PortfolioCalculator', () => {
       null
     );
 
+    portfolioSnapshotService = new PortfolioSnapshotService(null);
+
     redisCacheService = new RedisCacheService(null, null);
 
-    factory = new PortfolioCalculatorFactory(
+    portfolioCalculatorFactory = new PortfolioCalculatorFactory(
       configurationService,
       currentRateService,
       exchangeRateDataService,
+      portfolioSnapshotService,
       redisCacheService
     );
   });
 
   describe('get current positions', () => {
     it.only('with MSFT buy', async () => {
-      const spy = jest
-        .spyOn(Date, 'now')
-        .mockImplementation(() => parseDate('2023-07-10').getTime());
+      jest.useFakeTimers().setSystemTime(parseDate('2023-07-10').getTime());
 
       const activities: Activity[] = [
         {
@@ -117,19 +134,14 @@ describe('PortfolioCalculator', () => {
         }
       ];
 
-      const portfolioCalculator = factory.createCalculator({
+      const portfolioCalculator = portfolioCalculatorFactory.createCalculator({
         activities,
         calculationType: PerformanceCalculationType.TWR,
         currency: 'USD',
-        hasFilters: false,
         userId: userDummyData.id
       });
 
-      const portfolioSnapshot = await portfolioCalculator.computeSnapshot(
-        parseDate('2023-07-10')
-      );
-
-      spy.mockRestore();
+      const portfolioSnapshot = await portfolioCalculator.computeSnapshot();
 
       expect(portfolioSnapshot).toMatchObject({
         errors: [],
@@ -143,10 +155,27 @@ describe('PortfolioCalculator', () => {
             dividendInBaseCurrency: new Big('0.62'),
             fee: new Big('19'),
             firstBuyDate: '2021-09-16',
+            grossPerformance: new Big('33.25'),
+            grossPerformancePercentage: new Big('0.11136043941322258691'),
+            grossPerformancePercentageWithCurrencyEffect: new Big(
+              '0.11136043941322258691'
+            ),
+            grossPerformanceWithCurrencyEffect: new Big('33.25'),
             investment: new Big('298.58'),
             investmentWithCurrencyEffect: new Big('298.58'),
             marketPrice: 331.83,
             marketPriceInBaseCurrency: 331.83,
+            netPerformance: new Big('14.25'),
+            netPerformancePercentage: new Big('0.04772590260566682296'),
+            netPerformancePercentageWithCurrencyEffectMap: {
+              max: new Big('0.04772590260566682296')
+            },
+            netPerformanceWithCurrencyEffectMap: {
+              '1d': new Big('-5.39'),
+              '5y': new Big('14.25'),
+              max: new Big('14.25'),
+              wtd: new Big('-5.39')
+            },
             quantity: new Big('1'),
             symbol: 'MSFT',
             tags: [],
@@ -160,6 +189,12 @@ describe('PortfolioCalculator', () => {
         totalLiabilitiesWithCurrencyEffect: new Big('0'),
         totalValuablesWithCurrencyEffect: new Big('0')
       });
+
+      expect(last(portfolioSnapshot.historicalData)).toMatchObject(
+        expect.objectContaining({
+          totalInvestmentValueWithCurrencyEffect: 298.58
+        })
+      );
     });
   });
 });

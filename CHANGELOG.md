@@ -7,8 +7,346 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Set the stack and container names in the `docker-compose` files (`docker-compose.yml`, `docker-compose.build.yml` and `docker-compose.dev.yml`)
+
+## 2.120.0 - 2024-10-30
+
+### Added
+
+- Added support for log levels (`LOG_LEVELS`) to conditionally log `prisma` query events (`debug` or `verbose`)
+
 ### Changed
 
+- Restructured the resources page
+- Renamed the static portfolio analysis rule from _Allocation Cluster Risk_ to _Economic Market Cluster Risk_ (Developed Markets and Emerging Markets)
+- Improved the language localization for German (`de`)
+- Switched the `consistent-generic-constructors` rule from `warn` to `error` in the `eslint` configuration
+- Switched the `consistent-indexed-object-style` rule from `warn` to `off` in the `eslint` configuration
+- Switched the `consistent-type-assertions` rule from `warn` to `error` in the `eslint` configuration
+- Switched the `prefer-optional-chain` rule from `warn` to `error` in the `eslint` configuration
+- Upgraded `Nx` from version `20.0.3` to `20.0.6`
+
+## 2.119.0 - 2024-10-26
+
+### Changed
+
+- Switched the `consistent-type-definitions` rule from `warn` to `error` in the `eslint` configuration
+- Switched the `no-empty-function` rule from `warn` to `error` in the `eslint` configuration
+- Switched the `prefer-function-type` rule from `warn` to `error` in the `eslint` configuration
+- Upgraded `prisma` from version `5.20.0` to `5.21.1`
+
+### Fixed
+
+- Fixed an issue with the X-axis scale of the dividend timeline on the analysis page
+- Fixed an issue with the X-axis scale of the investment timeline on the analysis page
+- Fixed an issue with the X-axis scale of the portfolio evolution chart on the analysis page
+- Fixed an issue in the calculation of the static portfolio analysis rule: _Allocation Cluster Risk_ (Developed Markets)
+- Fixed an issue in the calculation of the static portfolio analysis rule: _Allocation Cluster Risk_ (Emerging Markets)
+
+## 2.118.0 - 2024-10-23
+
+### Added
+
+- Added a new static portfolio analysis rule: _Allocation Cluster Risk_ (Developed Markets)
+- Added a new static portfolio analysis rule: _Allocation Cluster Risk_ (Emerging Markets)
+- Added support for mutual funds in the _EOD Historical Data_ service
+
+### Changed
+
+- Improved the font colors of the chart of the holdings tab on the home page (experimental)
+- Optimized the dialog sizes for mobile (full screen)
+- Optimized the git-hook via `husky` to lint only affected projects before a commit
+- Upgraded `angular` from version `18.1.1` to `18.2.8`
+- Upgraded `Nx` from version `19.5.6` to `20.0.3`
+
+### Fixed
+
+- Fixed the warning `export was not found` in connection with `GetValuesParams`
+- Quoted the password for the _Redis_ service `healthcheck` in the `docker-compose` files (`docker-compose.yml` and `docker-compose.build.yml`)
+
+## 2.117.0 - 2024-10-19
+
+### Added
+
+- Added the logotype to the footer
+- Added the data providers management to the admin control panel
+
+### Changed
+
+- Improved the backgrounds of the chart of the holdings tab on the home page (experimental)
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Fixed an issue in the carousel component for the testimonial section on the landing page
+
+## 2.116.0 - 2024-10-17
+
+### Added
+
+- Extended the content of the _Self-Hosting_ section by the benchmarks concept for _Compare with..._ on the Frequently Asked Questions (FAQ) page
+- Extended the content of the _Self-Hosting_ section by the benchmarks concept for _Markets_ on the Frequently Asked Questions (FAQ) page
+- Set the permissions (`chmod 0700`) on `entrypoint.sh` in the `Dockerfile`
+
+### Changed
+
+- Improved the empty state in the benchmarks of the markets overview
+- Disabled the text hover effect in the chart of the holdings tab on the home page (experimental)
+- Improved the usability to customize the rule thresholds in the _X-ray_ section by introducing units (experimental)
+- Switched to adjusted market prices (splits and dividends) in the get historical functionality of the _EOD Historical Data_ service
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Fixed the usage of the environment variable `PROCESSOR_PORTFOLIO_SNAPSHOT_COMPUTATION_CONCURRENCY`
+
+## 2.115.0 - 2024-10-14
+
+### Added
+
+- Added the name to the tooltip of the chart of the holdings tab on the home page (experimental)
+
+### Changed
+
+- Improved the backgrounds of the chart of the holdings tab on the home page (experimental)
+- Improved the labels of the chart of the holdings tab on the home page (experimental)
+- Improved the usability to customize the rule thresholds in the _X-ray_ section by introducing sliders (experimental)
+- Refactored the rule thresholds in the _X-ray_ section (experimental)
+- Exposed the timeout of the portfolio snapshot computation as an environment variable (`PROCESSOR_PORTFOLIO_SNAPSHOT_COMPUTATION_TIMEOUT`)
+- Harmonized the processor concurrency environment variables
+- Improved the portfolio unit tests to work with exported activity files
+- Enabled the `noUnusedLocals` compiler option in the `tsconfig`
+- Enabled the `noUnusedParameters` compiler option in the `tsconfig`
+
+### Fixed
+
+- Considered the language of the user settings on login with _Security Token_
+
+### Todo
+
+- Rename the environment variable from `PROCESSOR_CONCURRENCY_GATHER_ASSET_PROFILE` to `PROCESSOR_GATHER_ASSET_PROFILE_CONCURRENCY`
+- Rename the environment variable from `PROCESSOR_CONCURRENCY_GATHER_HISTORICAL_MARKET_DATA` to `PROCESSOR_GATHER_HISTORICAL_MARKET_DATA_CONCURRENCY`
+- Rename the environment variable from `PROCESSOR_CONCURRENCY_PORTFOLIO_SNAPSHOT` to `PROCESSOR_PORTFOLIO_SNAPSHOT_COMPUTATION_CONCURRENCY`
+
+## 2.114.0 - 2024-10-10
+
+### Added
+
+- Added a tooltip to the chart of the holdings tab on the home page (experimental)
+- Extended the _Public API_ with the health check endpoint (experimental)
+
+### Changed
+
+- Moved the tags from the info to the user service
+- Switched the `prefer-const` rule from `warn` to `error` in the `eslint` configuration
+
+### Fixed
+
+- Fixed an exception in the portfolio details endpoint caused by a calculation of the allocations by market
+
+## 2.113.0 - 2024-10-06
+
+### Added
+
+- Set up a git-hook via `husky` to lint and format the changes before a commit
+- Added the `typescript-eslint/recommended-type-checked` rule to the `eslint` configuration
+- Added the `typescript-eslint/stylistic-type-checked` rule to the `eslint` configuration
+
+### Changed
+
+- Optimized the portfolio calculations by reusing date intervals
+- Refactored the calculation of the allocations by market on the allocations page
+- Refactored the calculation of the allocations by market on the public page
+
+### Fixed
+
+- Handled an exception in the historical market data gathering of derived currencies
+
+## 2.112.0 - 2024-10-03
+
+### Added
+
+- Added a message to the search asset component if no results have been found in the create or update activity dialog
+- Added support to customize the rule thresholds in the _X-ray_ section (experimental)
+
+### Changed
+
+- Optimized the portfolio calculations with smarter date interval selection
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Fixed an issue in the calculation of allocations by market (_Unknown_)
+- Fixed the `eslint` configuration
+
+## 2.111.0 - 2024-09-28
+
+### Added
+
+- Added read `permissions` to the `Platform` model
+- Added read `permissions` to the `Tag` model
+- Added `userId` to the `Tag` database schema
+
+### Changed
+
+- Considered the availability of the date range selector in the assistant per view
+- Considered the availability of the filters in the assistant per view
+- Optimized the portfolio calculations with smarter cloning of activities
+- Integrated the add currency functionality into the market data section of the admin control panel
+- Improved the language localization for German (`de`)
+- Upgraded `prisma` from version `5.19.1` to `5.20.0`
+- Upgraded `webpack-bundle-analyzer` from version `4.10.1` to `4.10.2`
+
+### Fixed
+
+- Fixed the content height of the create or update platform dialog in the admin control
+- Fixed the content height of the create or update tag dialog in the admin control
+
+## 2.110.0 - 2024-09-24
+
+### Changed
+
+- Improved the usability of various action menus by introducing horizontal lines to separate the delete action
+- Improved the chart in the account detail dialog (experimental)
+- Aligned the holdings and regions of the public page with the allocations page
+- Considered the user’s language in the link of the access table to share the portfolio
+- Improved the language localization for German (`de`)
+
+## 2.109.0 - 2024-09-21
+
+### Added
+
+- Extended the _Public API_ with a new endpoint that provides portfolio performance metrics (experimental)
+- Added the portfolio performance metrics to the public page
+- Added a blog post: _Hacktoberfest 2024_
+
+### Changed
+
+- Improved the usability of the create or update access dialog
+- Improved the loading indicator of the accounts table
+- Exposed the concurrency of the asset profile data gathering as an environment variable (`PROCESSOR_CONCURRENCY_GATHER_ASSET_PROFILE`)
+- Exposed the concurrency of the historical market data gathering as an environment variable (`PROCESSOR_CONCURRENCY_GATHER_HISTORICAL_MARKET_DATA`)
+- Exposed the concurrency of the portfolio snapshot calculation as an environment variable (`PROCESSOR_CONCURRENCY_PORTFOLIO_SNAPSHOT`)
+- Improved the language localization for German (`de`)
+- Improved the language localization for Polish (`pl`)
+- Upgraded `prisma` from version `5.19.0` to `5.19.1`
+
+## 2.108.0 - 2024-09-17
+
+### Added
+
+- Added support for bonds in the import dividends dialog
+- Added a _Copy link to clipboard_ action to the access table to share the portfolio
+- Added the current market price column to the historical market data table of the admin control
+- Introduced filters (`dataSource` and `symbol`) in the accounts endpoint
+
+### Changed
+
+- Improved the usability of the toggle component
+- Switched to the accounts endpoint in the holding detail dialog
+- Added a fallback in the get quotes functionality of the _EOD Historical Data_ service
+
+## 2.107.1 - 2024-09-12
+
+### Fixed
+
+- Fixed an issue in the activities filters that occurred during destructuring
+
+## 2.107.0 - 2024-09-10
+
+### Added
+
+- Extended the filters of the activities endpoint by `dataSource` and `symbol`
+
+### Changed
+
+- Migrated the portfolio snapshot calculation to the queue design pattern
+- Optimized the asynchronous operations using `Promise.all()` in the info service
+- Optimized the asynchronous operations using `Promise.all()` in the admin control panel endpoint
+- Extracted the users from the admin control panel endpoint to a dedicated endpoint
+- Improved the language localization for French (`fr`)
+- Improved the language localization for Italian (`it`)
+- Upgraded `bull` from version `4.10.4` to `4.16.2`
+
+## 2.106.0 - 2024-09-07
+
+### Added
+
+- Set up a performance logging service
+- Added a loading indicator to the queue jobs table in the admin control panel
+- Added a loading indicator to the users table in the admin control panel
+- Added the attribute `mode` to the scraper configuration to get quotes instantly
+
+### Changed
+
+- Reworked the portfolio calculator
+- Improved the caching of the portfolio snapshot in the portfolio calculator by returning cached data and recalculating in the background when it expires
+- Exposed the log levels as an environment variable (`LOG_LEVELS`)
+- Exposed the maximum of chart data items as an environment variable (`MAX_CHART_ITEMS`)
+- Changed the data format of the environment variable `CACHE_QUOTES_TTL` from seconds to milliseconds
+- Changed the data format of the environment variable `CACHE_TTL` from seconds to milliseconds
+- Removed the environment variable `MAX_ITEM_IN_CACHE`
+- Improved the error logs of the scraper configuration test in the asset profile details dialog of the admin control
+- Improved the language localization for Polish (`pl`)
+- Migrated from `cache-manager-redis-store` to `cache-manager-redis-yet`
+- Upgraded `cache-manager` from version `3.4.3` to `5.7.6`
+- Upgraded `prisma` from version `5.18.0` to `5.19.0`
+
+### Fixed
+
+- Fixed an issue in the view mode toggle of the holdings tab on the home page (experimental)
+- Fixed an issue on the portfolio activities page by loading the data only once
+- Fixed an issue in the carousel component for the testimonial section on the landing page
+- Fixed the historical market data gathering in the _Yahoo Finance_ service by switching from `historical()` to `chart()`
+- Handled an exception in the historical market data component of the asset profile details dialog in the admin control panel
+
+## 2.105.0 - 2024-08-21
+
+### Added
+
+- Added support to deactivate rules in the _X-ray_ section (experimental)
+
+### Changed
+
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Fixed the currency conversion for fees and values in the dividend import by applying the correct rate based on the activity date
+- Fixed the currency conversion for fees and values in the activities service by applying the correct rate based on the activity date
+
+## 2.104.1 - 2024-08-17
+
+### Fixed
+
+- Fixed an issue with the clone functionality of an activity caused by a changed date format
+
+## 2.104.0 - 2024-08-17
+
+### Added
+
+- Set up a notification service for alert and confirmation dialogs
+
+### Changed
+
+- Refactored the dark theme CSS selector
+- Improved the language localization for German (`de`)
+- Upgraded `date-fns` from version `2.29.3` to `3.6.0`
+- Upgraded `zone.js` from version `0.14.7` to `0.14.10`
+
+### Fixed
+
+- Removed `read_only: true` from the `docker-compose.yml` file to allow `prisma` to run migrations
+
+## 2.103.0 - 2024-08-10
+
+### Changed
+
+- Improved the color assignment in the chart of the holdings tab on the home page (experimental)
+- Enabled Catalan (`ca`) as an option in the user settings (experimental)
+- Enabled Polish (`pl`) as an option in the user settings (experimental)
 - Improved the language localization for Portuguese (`pt`)
 - Optimized the docker image layers to reduce the image size
 - Updated the binary targets of `debian-openssl` for `prisma`

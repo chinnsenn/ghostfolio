@@ -1,9 +1,17 @@
 import { Environment } from '@ghostfolio/api/services/interfaces/environment.interface';
-import { DEFAULT_ROOT_URL } from '@ghostfolio/common/config';
+import {
+  CACHE_TTL_NO_CACHE,
+  DEFAULT_PROCESSOR_GATHER_ASSET_PROFILE_CONCURRENCY,
+  DEFAULT_PROCESSOR_GATHER_HISTORICAL_MARKET_DATA_CONCURRENCY,
+  DEFAULT_PROCESSOR_PORTFOLIO_SNAPSHOT_COMPUTATION_CONCURRENCY,
+  DEFAULT_PROCESSOR_PORTFOLIO_SNAPSHOT_COMPUTATION_TIMEOUT,
+  DEFAULT_ROOT_URL
+} from '@ghostfolio/common/config';
 
 import { Injectable } from '@nestjs/common';
 import { DataSource } from '@prisma/client';
 import { bool, cleanEnv, host, json, num, port, str, url } from 'envalid';
+import ms from 'ms';
 
 @Injectable()
 export class ConfigurationService {
@@ -20,8 +28,8 @@ export class ConfigurationService {
       API_KEY_FINANCIAL_MODELING_PREP: str({ default: '' }),
       API_KEY_OPEN_FIGI: str({ default: '' }),
       API_KEY_RAPID_API: str({ default: '' }),
-      CACHE_QUOTES_TTL: num({ default: 1 }),
-      CACHE_TTL: num({ default: 1 }),
+      CACHE_QUOTES_TTL: num({ default: ms('1 minute') }),
+      CACHE_TTL: num({ default: CACHE_TTL_NO_CACHE }),
       DATA_SOURCE_EXCHANGE_RATES: str({ default: DataSource.YAHOO }),
       DATA_SOURCE_IMPORT: str({ default: DataSource.YAHOO }),
       DATA_SOURCES: json({
@@ -41,8 +49,20 @@ export class ConfigurationService {
       HOST: host({ default: '0.0.0.0' }),
       JWT_SECRET_KEY: str({}),
       MAX_ACTIVITIES_TO_IMPORT: num({ default: Number.MAX_SAFE_INTEGER }),
-      MAX_ITEM_IN_CACHE: num({ default: 9999 }),
+      MAX_CHART_ITEMS: num({ default: 365 }),
       PORT: port({ default: 3333 }),
+      PROCESSOR_GATHER_ASSET_PROFILE_CONCURRENCY: num({
+        default: DEFAULT_PROCESSOR_GATHER_ASSET_PROFILE_CONCURRENCY
+      }),
+      PROCESSOR_GATHER_HISTORICAL_MARKET_DATA_CONCURRENCY: num({
+        default: DEFAULT_PROCESSOR_GATHER_HISTORICAL_MARKET_DATA_CONCURRENCY
+      }),
+      PROCESSOR_PORTFOLIO_SNAPSHOT_COMPUTATION_CONCURRENCY: num({
+        default: DEFAULT_PROCESSOR_PORTFOLIO_SNAPSHOT_COMPUTATION_CONCURRENCY
+      }),
+      PROCESSOR_PORTFOLIO_SNAPSHOT_COMPUTATION_TIMEOUT: num({
+        default: DEFAULT_PROCESSOR_PORTFOLIO_SNAPSHOT_COMPUTATION_TIMEOUT
+      }),
       REDIS_DB: num({ default: 0 }),
       REDIS_HOST: str({ default: 'localhost' }),
       REDIS_PASSWORD: str({ default: '' }),

@@ -18,6 +18,7 @@ import {
 } from '@ghostfolio/common/config';
 import { DATE_FORMAT, isCurrency } from '@ghostfolio/common/helper';
 import { DataProviderInfo } from '@ghostfolio/common/interfaces';
+import { MarketState } from '@ghostfolio/common/types';
 
 import { Injectable, Logger } from '@nestjs/common';
 import {
@@ -42,7 +43,7 @@ export class EodHistoricalDataService implements DataProviderInterface {
     this.apiKey = this.configurationService.get('API_KEY_EOD_HISTORICAL_DATA');
   }
 
-  public canHandle(symbol: string) {
+  public canHandle() {
     return true;
   }
 
@@ -162,10 +163,10 @@ export class EodHistoricalDataService implements DataProviderInterface {
       ).json<any>();
 
       return response.reduce(
-        (result, { close, date }, index, array) => {
-          if (isNumber(close)) {
+        (result, { adjusted_close, date }) => {
+          if (isNumber(adjusted_close)) {
             result[this.convertFromEodSymbol(symbol)][date] = {
-              marketPrice: close
+              marketPrice: adjusted_close
             };
           } else {
             Logger.error(
@@ -202,7 +203,7 @@ export class EodHistoricalDataService implements DataProviderInterface {
     requestTimeout = this.configurationService.get('REQUEST_TIMEOUT'),
     symbols
   }: GetQuotesParams): Promise<{ [symbol: string]: IDataProviderResponse }> {
-    let response: { [symbol: string]: IDataProviderResponse } = {};
+    const response: { [symbol: string]: IDataProviderResponse } = {};
 
     if (symbols.length <= 0) {
       return response;
@@ -229,7 +230,12 @@ export class EodHistoricalDataService implements DataProviderInterface {
         }
       ).json<any>();
 
-      const quotes =
+      const quotes: {
+        close: number;
+        code: string;
+        previousClose: number;
+        timestamp: number;
+      }[] =
         eodHistoricalDataSymbols.length === 1
           ? [realTimeResponse]
           : realTimeResponse;
@@ -243,7 +249,7 @@ export class EodHistoricalDataService implements DataProviderInterface {
         })
       );
 
-      for (const { close, code, timestamp } of quotes) {
+      for (const { close, code, previousClose, timestamp } of quotes) {
         let currency: string;
 
         if (this.isForex(code)) {
@@ -267,15 +273,21 @@ export class EodHistoricalDataService implements DataProviderInterface {
           }
         }
 
-        if (isNumber(close)) {
+        if (isNumber(close) || isNumber(previousClose)) {
+          const marketPrice: number = isNumber(close) ? close : previousClose;
+          let marketState: MarketState = 'closed';
+
+          if (this.isForex(code) || isToday(new Date(timestamp * 1000))) {
+            marketState = 'open';
+          } else if (!isNumber(close)) {
+            marketState = 'delayed';
+          }
+
           response[this.convertFromEodSymbol(code)] = {
             currency,
-            dataSource: this.getName(),
-            marketPrice: close,
-            marketState:
-              this.isForex(code) || isToday(new Date(timestamp * 1000))
-                ? 'open'
-                : 'closed'
+            marketPrice,
+            marketState,
+            dataSource: this.getName()
           };
         } else {
           Logger.error(
@@ -290,9 +302,9 @@ export class EodHistoricalDataService implements DataProviderInterface {
       let message = error;
 
       if (error?.code === 'ABORT_ERR') {
-        message = `RequestError: The operation to get the quotes was aborted because the request to the data provider took more than ${this.configurationService.get(
-          'REQUEST_TIMEOUT'
-        )}ms`;
+        message = `RequestError: The operation to get the quotes was aborted because the request to the data provider took more than ${(
+          this.configurationService.get('REQUEST_TIMEOUT') / 1000
+        ).toFixed(3)} seconds`;
       }
 
       Logger.error(message, 'EodHistoricalDataService');
@@ -487,6 +499,10 @@ export class EodHistoricalDataService implements DataProviderInterface {
       case 'etf':
         assetClass = AssetClass.EQUITY;
         assetSubClass = AssetSubClass.ETF;
+        break;
+      case 'fund':
+        assetClass = AssetClass.EQUITY;
+        assetSubClass = AssetSubClass.MUTUALFUND;
         break;
     }
 

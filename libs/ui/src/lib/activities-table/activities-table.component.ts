@@ -1,5 +1,7 @@
 import { Activity } from '@ghostfolio/api/app/order/interfaces/activities.interface';
 import { GfAssetProfileIconComponent } from '@ghostfolio/client/components/asset-profile-icon/asset-profile-icon.component';
+import { ConfirmationDialogType } from '@ghostfolio/client/core/notification/confirmation-dialog/confirmation-dialog.type';
+import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
 import { GfSymbolModule } from '@ghostfolio/client/pipes/symbol/symbol.module';
 import { DEFAULT_PAGE_SIZE } from '@ghostfolio/common/config';
 import { getDateFormatString, getLocale } from '@ghostfolio/common/helper';
@@ -40,7 +42,6 @@ import {
 } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Router, RouterModule } from '@angular/router';
 import { isUUID } from 'class-validator';
 import { endOfToday, isAfter } from 'date-fns';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
@@ -62,8 +63,7 @@ import { Subject, Subscription, takeUntil } from 'rxjs';
     MatSortModule,
     MatTableModule,
     MatTooltipModule,
-    NgxSkeletonLoaderModule,
-    RouterModule
+    NgxSkeletonLoaderModule
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   selector: 'gf-activities-table',
@@ -93,6 +93,7 @@ export class GfActivitiesTableComponent
   @Input() totalItems = Number.MAX_SAFE_INTEGER;
 
   @Output() activitiesDeleted = new EventEmitter<void>();
+  @Output() activityClicked = new EventEmitter<AssetProfileIdentifier>();
   @Output() activityDeleted = new EventEmitter<string>();
   @Output() activityToClone = new EventEmitter<OrderWithAccount>();
   @Output() activityToUpdate = new EventEmitter<OrderWithAccount>();
@@ -120,7 +121,7 @@ export class GfActivitiesTableComponent
 
   private unsubscribeSubject = new Subject<void>();
 
-  public constructor(private router: Router) {}
+  public constructor(private notificationService: NotificationService) {}
 
   public ngOnInit() {
     if (this.showCheckbox) {
@@ -194,13 +195,11 @@ export class GfActivitiesTableComponent
       }
     } else if (
       this.hasPermissionToOpenDetails &&
-      !activity.isDraft &&
-      activity.type !== 'FEE' &&
-      activity.type !== 'INTEREST' &&
-      activity.type !== 'ITEM' &&
-      activity.type !== 'LIABILITY'
+      activity.Account?.isExcluded !== true &&
+      activity.isDraft === false &&
+      ['BUY', 'DIVIDEND', 'SELL'].includes(activity.type)
     ) {
-      this.onOpenPositionDialog({
+      this.activityClicked.emit({
         dataSource: activity.SymbolProfile.dataSource,
         symbol: activity.SymbolProfile.symbol
       });
@@ -212,23 +211,23 @@ export class GfActivitiesTableComponent
   }
 
   public onDeleteActivities() {
-    const confirmation = confirm(
-      $localize`Do you really want to delete these activities?`
-    );
-
-    if (confirmation) {
-      this.activitiesDeleted.emit();
-    }
+    this.notificationService.confirm({
+      confirmFn: () => {
+        this.activitiesDeleted.emit();
+      },
+      confirmType: ConfirmationDialogType.Warn,
+      title: $localize`Do you really want to delete these activities?`
+    });
   }
 
   public onDeleteActivity(aId: string) {
-    const confirmation = confirm(
-      $localize`Do you really want to delete this activity?`
-    );
-
-    if (confirmation) {
-      this.activityDeleted.emit(aId);
-    }
+    this.notificationService.confirm({
+      confirmFn: () => {
+        this.activityDeleted.emit(aId);
+      },
+      confirmType: ConfirmationDialogType.Warn,
+      title: $localize`Do you really want to delete this activity?`
+    });
   }
 
   public onExport() {
@@ -260,12 +259,8 @@ export class GfActivitiesTableComponent
   }
 
   public onOpenComment(aComment: string) {
-    alert(aComment);
-  }
-
-  public onOpenPositionDialog({ dataSource, symbol }: AssetProfileIdentifier) {
-    this.router.navigate([], {
-      queryParams: { dataSource, symbol, holdingDetailDialog: true }
+    this.notificationService.alert({
+      title: aComment
     });
   }
 
@@ -274,9 +269,13 @@ export class GfActivitiesTableComponent
   }
 
   public toggleAllRows() {
-    this.areAllRowsSelected()
-      ? this.selectedRows.clear()
-      : this.dataSource.data.forEach((row) => this.selectedRows.select(row));
+    if (this.areAllRowsSelected()) {
+      this.selectedRows.clear();
+    } else {
+      this.dataSource.data.forEach((row) => {
+        this.selectedRows.select(row);
+      });
+    }
 
     this.selectedActivities.emit(this.selectedRows.selected);
   }

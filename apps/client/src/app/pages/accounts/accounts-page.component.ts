@@ -3,6 +3,7 @@ import { TransferBalanceDto } from '@ghostfolio/api/app/account/transfer-balance
 import { UpdateAccountDto } from '@ghostfolio/api/app/account/update-account.dto';
 import { AccountDetailDialog } from '@ghostfolio/client/components/account-detail-dialog/account-detail-dialog.component';
 import { AccountDetailDialogParams } from '@ghostfolio/client/components/account-detail-dialog/interfaces/interfaces';
+import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
 import { DataService } from '@ghostfolio/client/services/data.service';
 import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
@@ -46,6 +47,7 @@ export class AccountsPageComponent implements OnDestroy, OnInit {
     private deviceService: DeviceDetectorService,
     private dialog: MatDialog,
     private impersonationStorageService: ImpersonationStorageService,
+    private notificationService: NotificationService,
     private route: ActivatedRoute,
     private router: Router,
     private userService: UserService
@@ -134,18 +136,18 @@ export class AccountsPageComponent implements OnDestroy, OnInit {
   }
 
   public onDeleteAccount(aId: string) {
+    this.reset();
+
     this.dataService
       .deleteAccount(aId)
       .pipe(takeUntil(this.unsubscribeSubject))
-      .subscribe({
-        next: () => {
-          this.userService
-            .get(true)
-            .pipe(takeUntil(this.unsubscribeSubject))
-            .subscribe();
+      .subscribe(() => {
+        this.userService
+          .get(true)
+          .pipe(takeUntil(this.unsubscribeSubject))
+          .subscribe();
 
-          this.fetchAccounts();
-        }
+        this.fetchAccounts();
       });
   }
 
@@ -182,7 +184,7 @@ export class AccountsPageComponent implements OnDestroy, OnInit {
           platformId
         }
       },
-      height: this.deviceType === 'mobile' ? '97.5vh' : '80vh',
+      height: this.deviceType === 'mobile' ? '98vh' : '80vh',
       width: this.deviceType === 'mobile' ? '100vw' : '50rem'
     });
 
@@ -191,19 +193,21 @@ export class AccountsPageComponent implements OnDestroy, OnInit {
       .pipe(takeUntil(this.unsubscribeSubject))
       .subscribe((account: UpdateAccountDto | null) => {
         if (account) {
+          this.reset();
+
           this.dataService
             .putAccount(account)
             .pipe(takeUntil(this.unsubscribeSubject))
-            .subscribe({
-              next: () => {
-                this.userService
-                  .get(true)
-                  .pipe(takeUntil(this.unsubscribeSubject))
-                  .subscribe();
+            .subscribe(() => {
+              this.userService
+                .get(true)
+                .pipe(takeUntil(this.unsubscribeSubject))
+                .subscribe();
 
-                this.fetchAccounts();
-              }
+              this.fetchAccounts();
             });
+
+          this.changeDetectorRef.markForCheck();
         }
 
         this.router.navigate(['.'], { relativeTo: this.route });
@@ -218,7 +222,7 @@ export class AccountsPageComponent implements OnDestroy, OnInit {
   private openAccountDetailDialog(aAccountId: string) {
     const dialogRef = this.dialog.open(AccountDetailDialog, {
       autoFocus: false,
-      data: <AccountDetailDialogParams>{
+      data: {
         accountId: aAccountId,
         deviceType: this.deviceType,
         hasImpersonationId: this.hasImpersonationId,
@@ -226,8 +230,8 @@ export class AccountsPageComponent implements OnDestroy, OnInit {
           !this.hasImpersonationId &&
           hasPermission(this.user?.permissions, permissions.createOrder) &&
           !this.user?.settings?.isRestrictedView
-      },
-      height: this.deviceType === 'mobile' ? '97.5vh' : '80vh',
+      } as AccountDetailDialogParams,
+      height: this.deviceType === 'mobile' ? '98vh' : '80vh',
       width: this.deviceType === 'mobile' ? '100vw' : '50rem'
     });
 
@@ -253,7 +257,7 @@ export class AccountsPageComponent implements OnDestroy, OnInit {
           platformId: null
         }
       },
-      height: this.deviceType === 'mobile' ? '97.5vh' : '80vh',
+      height: this.deviceType === 'mobile' ? '98vh' : '80vh',
       width: this.deviceType === 'mobile' ? '100vw' : '50rem'
     });
 
@@ -262,19 +266,21 @@ export class AccountsPageComponent implements OnDestroy, OnInit {
       .pipe(takeUntil(this.unsubscribeSubject))
       .subscribe((account: CreateAccountDto | null) => {
         if (account) {
+          this.reset();
+
           this.dataService
             .postAccount(account)
             .pipe(takeUntil(this.unsubscribeSubject))
-            .subscribe({
-              next: () => {
-                this.userService
-                  .get(true)
-                  .pipe(takeUntil(this.unsubscribeSubject))
-                  .subscribe();
+            .subscribe(() => {
+              this.userService
+                .get(true)
+                .pipe(takeUntil(this.unsubscribeSubject))
+                .subscribe();
 
-                this.fetchAccounts();
-              }
+              this.fetchAccounts();
             });
+
+          this.changeDetectorRef.markForCheck();
         }
 
         this.router.navigate(['.'], { relativeTo: this.route });
@@ -294,6 +300,8 @@ export class AccountsPageComponent implements OnDestroy, OnInit {
       .pipe(takeUntil(this.unsubscribeSubject))
       .subscribe((data: any) => {
         if (data) {
+          this.reset();
+
           const { accountIdFrom, accountIdTo, balance }: TransferBalanceDto =
             data?.account;
 
@@ -305,7 +313,9 @@ export class AccountsPageComponent implements OnDestroy, OnInit {
             })
             .pipe(
               catchError(() => {
-                alert($localize`Oops, cash balance transfer has failed.`);
+                this.notificationService.alert({
+                  title: $localize`Oops, cash balance transfer has failed.`
+                });
 
                 return EMPTY;
               }),
@@ -314,9 +324,18 @@ export class AccountsPageComponent implements OnDestroy, OnInit {
             .subscribe(() => {
               this.fetchAccounts();
             });
+
+          this.changeDetectorRef.markForCheck();
         }
 
         this.router.navigate(['.'], { relativeTo: this.route });
       });
+  }
+
+  private reset() {
+    this.accounts = undefined;
+    this.totalBalanceInBaseCurrency = 0;
+    this.totalValueInBaseCurrency = 0;
+    this.transactionCount = 0;
   }
 }

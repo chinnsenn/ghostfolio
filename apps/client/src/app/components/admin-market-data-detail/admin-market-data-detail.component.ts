@@ -12,7 +12,6 @@ import {
   EventEmitter,
   Input,
   OnChanges,
-  OnInit,
   Output
 } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
@@ -42,7 +41,7 @@ import { MarketDataDetailDialog } from './market-data-detail-dialog/market-data-
   styleUrls: ['./admin-market-data-detail.component.scss'],
   templateUrl: './admin-market-data-detail.component.html'
 })
-export class AdminMarketDataDetailComponent implements OnChanges, OnInit {
+export class AdminMarketDataDetailComponent implements OnChanges {
   @Input() currency: string;
   @Input() dataSource: DataSource;
   @Input() dateOfFirstActivity: string;
@@ -81,8 +80,6 @@ export class AdminMarketDataDetailComponent implements OnChanges, OnInit {
       });
   }
 
-  public ngOnInit() {}
-
   public ngOnChanges() {
     this.defaultDateFormat = getDateFormatString(this.locale);
 
@@ -93,52 +90,52 @@ export class AdminMarketDataDetailComponent implements OnChanges, OnInit {
       };
     });
 
-    let date = parseISO(this.dateOfFirstActivity);
-
-    const missingMarketData: Partial<MarketData>[] = [];
-
-    if (this.historicalDataItems?.[0]?.date) {
-      while (
-        isBefore(
-          date,
-          parse(this.historicalDataItems[0].date, DATE_FORMAT, new Date())
-        )
-      ) {
-        missingMarketData.push({
-          date,
-          marketPrice: undefined
-        });
-
-        date = addDays(date, 1);
-      }
-    }
-
-    const marketDataItems = [...missingMarketData, ...this.marketData];
-
-    if (!isToday(last(marketDataItems)?.date)) {
-      marketDataItems.push({ date: new Date() });
-    }
-
-    this.marketDataByMonth = {};
-
-    for (const marketDataItem of marketDataItems) {
-      const currentDay = parseInt(format(marketDataItem.date, 'd'), 10);
-      const key = format(marketDataItem.date, 'yyyy-MM');
-
-      if (!this.marketDataByMonth[key]) {
-        this.marketDataByMonth[key] = {};
-      }
-
-      this.marketDataByMonth[key][
-        currentDay < 10 ? `0${currentDay}` : currentDay
-      ] = {
-        date: marketDataItem.date,
-        day: currentDay,
-        marketPrice: marketDataItem.marketPrice
-      };
-    }
-
     if (this.dateOfFirstActivity) {
+      let date = parseISO(this.dateOfFirstActivity);
+
+      const missingMarketData: Partial<MarketData>[] = [];
+
+      if (this.historicalDataItems?.[0]?.date) {
+        while (
+          isBefore(
+            date,
+            parse(this.historicalDataItems[0].date, DATE_FORMAT, new Date())
+          )
+        ) {
+          missingMarketData.push({
+            date,
+            marketPrice: undefined
+          });
+
+          date = addDays(date, 1);
+        }
+      }
+
+      const marketDataItems = [...missingMarketData, ...this.marketData];
+
+      if (!isToday(last(marketDataItems)?.date)) {
+        marketDataItems.push({ date: new Date() });
+      }
+
+      this.marketDataByMonth = {};
+
+      for (const marketDataItem of marketDataItems) {
+        const currentDay = parseInt(format(marketDataItem.date, 'd'), 10);
+        const key = format(marketDataItem.date, 'yyyy-MM');
+
+        if (!this.marketDataByMonth[key]) {
+          this.marketDataByMonth[key] = {};
+        }
+
+        this.marketDataByMonth[key][
+          currentDay < 10 ? `0${currentDay}` : currentDay
+        ] = {
+          date: marketDataItem.date,
+          day: currentDay,
+          marketPrice: marketDataItem.marketPrice
+        };
+      }
+
       // Fill up missing months
       const dates = Object.keys(this.marketDataByMonth).sort();
       const startDate = min([
@@ -181,15 +178,15 @@ export class AdminMarketDataDetailComponent implements OnChanges, OnInit {
     const marketPrice = this.marketDataByMonth[yearMonth]?.[day]?.marketPrice;
 
     const dialogRef = this.dialog.open(MarketDataDetailDialog, {
-      data: <MarketDataDetailDialogParams>{
+      data: {
         marketPrice,
         currency: this.currency,
         dataSource: this.dataSource,
         dateString: `${yearMonth}-${day}`,
         symbol: this.symbol,
         user: this.user
-      },
-      height: this.deviceType === 'mobile' ? '97.5vh' : '80vh',
+      } as MarketDataDetailDialogParams,
+      height: this.deviceType === 'mobile' ? '98vh' : '80vh',
       width: this.deviceType === 'mobile' ? '100vw' : '50rem'
     });
 

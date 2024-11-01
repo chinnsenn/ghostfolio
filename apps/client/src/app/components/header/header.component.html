@@ -121,7 +121,7 @@
             matBadge="✓"
             matBadgeSize="small"
             [mat-menu-trigger-for]="assistantMenu"
-            [matBadgeHidden]="!hasFilters"
+            [matBadgeHidden]="!hasFilters || !hasPermissionToChangeFilters"
             [matMenuTriggerRestoreFocus]="false"
             (menuOpened)="onOpenAssistant()"
           >
@@ -140,6 +140,8 @@
               [hasPermissionToAccessAdminControl]="
                 hasPermissionToAccessAdminControl
               "
+              [hasPermissionToChangeDateRange]="hasPermissionToChangeDateRange"
+              [hasPermissionToChangeFilters]="hasPermissionToChangeFilters"
               [user]="user"
               (closed)="closeAssistant()"
               (dateRangeChanged)="onDateRangeChange($event)"
@@ -178,7 +180,8 @@
                     <ng-container i18n>Upgrade Plan</ng-container>
                   } @else if (
                     user.subscription.offer === 'renewal' ||
-                    user.subscription.offer === 'renewal-early-bird'
+                    user.subscription.offer === 'renewal-early-bird-2023' ||
+                    user.subscription.offer === 'renewal-early-bird-2024'
                   ) {
                     <ng-container i18n>Renew Plan</ng-container>
                   }

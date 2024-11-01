@@ -14,9 +14,12 @@ import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.s
 import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
+import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
+import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
 
 import { Big } from 'big.js';
+import { last } from 'lodash';
 
 jest.mock('@ghostfolio/api/app/portfolio/current-rate.service', () => {
   return {
@@ -26,6 +29,18 @@ jest.mock('@ghostfolio/api/app/portfolio/current-rate.service', () => {
     })
   };
 });
+
+jest.mock(
+  '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service',
+  () => {
+    return {
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      PortfolioSnapshotService: jest.fn().mockImplementation(() => {
+        return PortfolioSnapshotServiceMock;
+      })
+    };
+  }
+);
 
 jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
   return {
@@ -40,7 +55,8 @@ describe('PortfolioCalculator', () => {
   let configurationService: ConfigurationService;
   let currentRateService: CurrentRateService;
   let exchangeRateDataService: ExchangeRateDataService;
-  let factory: PortfolioCalculatorFactory;
+  let portfolioCalculatorFactory: PortfolioCalculatorFactory;
+  let portfolioSnapshotService: PortfolioSnapshotService;
   let redisCacheService: RedisCacheService;
 
   beforeEach(() => {
@@ -55,21 +71,22 @@ describe('PortfolioCalculator', () => {
       null
     );
 
+    portfolioSnapshotService = new PortfolioSnapshotService(null);
+
     redisCacheService = new RedisCacheService(null, null);
 
-    factory = new PortfolioCalculatorFactory(
+    portfolioCalculatorFactory = new PortfolioCalculatorFactory(
       configurationService,
       currentRateService,
       exchangeRateDataService,
+      portfolioSnapshotService,
       redisCacheService
     );
   });
 
   describe('get current positions', () => {
     it.only('with BALN.SW buy and sell in two activities', async () => {
-      const spy = jest
-        .spyOn(Date, 'now')
-        .mockImplementation(() => parseDate('2021-12-18').getTime());
+      jest.useFakeTimers().setSystemTime(parseDate('2021-12-18').getTime());
 
       const activities: Activity[] = [
         {
@@ -119,47 +136,26 @@ describe('PortfolioCalculator', () => {
         }
       ];
 
-      const portfolioCalculator = factory.createCalculator({
+      const portfolioCalculator = portfolioCalculatorFactory.createCalculator({
         activities,
         calculationType: PerformanceCalculationType.TWR,
         currency: 'CHF',
-        hasFilters: false,
         userId: userDummyData.id
       });
 
-      const chartData = await portfolioCalculator.getChartData({
-        start: parseDate('2021-11-22')
-      });
-
-      const portfolioSnapshot = await portfolioCalculator.computeSnapshot(
-        parseDate('2021-11-22')
-      );
+      const portfolioSnapshot = await portfolioCalculator.computeSnapshot();
 
       const investments = portfolioCalculator.getInvestments();
 
       const investmentsByMonth = portfolioCalculator.getInvestmentsByGroup({
-        data: chartData,
+        data: portfolioSnapshot.historicalData,
         groupBy: 'month'
       });
 
-      spy.mockRestore();
-
-      expect(portfolioSnapshot).toEqual({
+      expect(portfolioSnapshot).toMatchObject({
         currentValueInBaseCurrency: new Big('0'),
         errors: [],
-        grossPerformance: new Big('-12.6'),
-        grossPerformancePercentage: new Big('-0.04408677396780965649'),
-        grossPerformancePercentageWithCurrencyEffect: new Big(
-          '-0.04408677396780965649'
-        ),
-        grossPerformanceWithCurrencyEffect: new Big('-12.6'),
         hasErrors: false,
-        netPerformance: new Big('-15.8'),
-        netPerformancePercentage: new Big('-0.05528341497550734703'),
-        netPerformancePercentageWithCurrencyEffect: new Big(
-          '-0.05528341497550734703'
-        ),
-        netPerformanceWithCurrencyEffect: new Big('-15.8'),
         positions: [
           {
             averagePrice: new Big('0'),
@@ -178,12 +174,12 @@ describe('PortfolioCalculator', () => {
             grossPerformanceWithCurrencyEffect: new Big('-12.6'),
             investment: new Big('0'),
             investmentWithCurrencyEffect: new Big('0'),
-            netPerformance: new Big('-15.8'),
-            netPerformancePercentage: new Big('-0.05528341497550734703'),
-            netPerformancePercentageWithCurrencyEffect: new Big(
-              '-0.05528341497550734703'
-            ),
-            netPerformanceWithCurrencyEffect: new Big('-15.8'),
+            netPerformancePercentageWithCurrencyEffectMap: {
+              max: new Big('-0.0552834149755073478')
+            },
+            netPerformanceWithCurrencyEffectMap: {
+              max: new Big('-15.8')
+            },
             marketPrice: 148.9,
             marketPriceInBaseCurrency: 148.9,
             quantity: new Big('0'),
@@ -204,6 +200,16 @@ describe('PortfolioCalculator', () => {
         totalLiabilitiesWithCurrencyEffect: new Big('0'),
         totalValuablesWithCurrencyEffect: new Big('0')
       });
+
+      expect(last(portfolioSnapshot.historicalData)).toMatchObject(
+        expect.objectContaining({
+          netPerformance: -15.8,
+          netPerformanceInPercentage: -0.05528341497550734703,
+          netPerformanceInPercentageWithCurrencyEffect: -0.05528341497550734703,
+          netPerformanceWithCurrencyEffect: -15.8,
+          totalInvestmentValueWithCurrencyEffect: 0
+        })
+      );
 
       expect(investments).toEqual([
         { date: '2021-11-22', investment: new Big('285.8') },

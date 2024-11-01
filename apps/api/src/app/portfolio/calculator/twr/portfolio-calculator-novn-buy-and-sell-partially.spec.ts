@@ -1,6 +1,8 @@
+import { CreateOrderDto } from '@ghostfolio/api/app/order/create-order.dto';
 import { Activity } from '@ghostfolio/api/app/order/interfaces/activities.interface';
 import {
   activityDummyData,
+  loadActivityExportFile,
   symbolProfileDummyData,
   userDummyData
 } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils';
@@ -14,9 +16,13 @@ import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.s
 import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
+import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
+import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
 
 import { Big } from 'big.js';
+import { last } from 'lodash';
+import { join } from 'path';
 
 jest.mock('@ghostfolio/api/app/portfolio/current-rate.service', () => {
   return {
@@ -26,6 +32,18 @@ jest.mock('@ghostfolio/api/app/portfolio/current-rate.service', () => {
     })
   };
 });
+
+jest.mock(
+  '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service',
+  () => {
+    return {
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      PortfolioSnapshotService: jest.fn().mockImplementation(() => {
+        return PortfolioSnapshotServiceMock;
+      })
+    };
+  }
+);
 
 jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
   return {
@@ -37,11 +55,23 @@ jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
 });
 
 describe('PortfolioCalculator', () => {
+  let activityDtos: CreateOrderDto[];
+
   let configurationService: ConfigurationService;
   let currentRateService: CurrentRateService;
   let exchangeRateDataService: ExchangeRateDataService;
-  let factory: PortfolioCalculatorFactory;
+  let portfolioCalculatorFactory: PortfolioCalculatorFactory;
+  let portfolioSnapshotService: PortfolioSnapshotService;
   let redisCacheService: RedisCacheService;
+
+  beforeAll(() => {
+    activityDtos = loadActivityExportFile(
+      join(
+        __dirname,
+        '../../../../../../../test/import/ok-novn-buy-and-sell-partially.json'
+      )
+    );
+  });
 
   beforeEach(() => {
     configurationService = new ConfigurationService();
@@ -55,96 +85,56 @@ describe('PortfolioCalculator', () => {
       null
     );
 
+    portfolioSnapshotService = new PortfolioSnapshotService(null);
+
     redisCacheService = new RedisCacheService(null, null);
 
-    factory = new PortfolioCalculatorFactory(
+    portfolioCalculatorFactory = new PortfolioCalculatorFactory(
       configurationService,
       currentRateService,
       exchangeRateDataService,
+      portfolioSnapshotService,
       redisCacheService
     );
   });
 
   describe('get current positions', () => {
     it.only('with NOVN.SW buy and sell partially', async () => {
-      const spy = jest
-        .spyOn(Date, 'now')
-        .mockImplementation(() => parseDate('2022-04-11').getTime());
+      jest.useFakeTimers().setSystemTime(parseDate('2022-04-11').getTime());
 
-      const activities: Activity[] = [
-        {
-          ...activityDummyData,
-          date: new Date('2022-03-07'),
-          fee: 1.3,
-          quantity: 2,
-          SymbolProfile: {
-            ...symbolProfileDummyData,
-            currency: 'CHF',
-            dataSource: 'YAHOO',
-            name: 'Novartis AG',
-            symbol: 'NOVN.SW'
-          },
-          type: 'BUY',
-          unitPrice: 75.8
-        },
-        {
-          ...activityDummyData,
-          date: new Date('2022-04-08'),
-          fee: 2.95,
-          quantity: 1,
-          SymbolProfile: {
-            ...symbolProfileDummyData,
-            currency: 'CHF',
-            dataSource: 'YAHOO',
-            name: 'Novartis AG',
-            symbol: 'NOVN.SW'
-          },
-          type: 'SELL',
-          unitPrice: 85.73
+      const activities: Activity[] = activityDtos.map((activity) => ({
+        ...activityDummyData,
+        ...activity,
+        date: parseDate(activity.date),
+        SymbolProfile: {
+          ...symbolProfileDummyData,
+          currency: activity.currency,
+          dataSource: activity.dataSource,
+          name: 'Novartis AG',
+          symbol: activity.symbol
         }
-      ];
+      }));
 
-      const portfolioCalculator = factory.createCalculator({
+      const portfolioCalculator = portfolioCalculatorFactory.createCalculator({
         activities,
         calculationType: PerformanceCalculationType.TWR,
         currency: 'CHF',
-        hasFilters: false,
         userId: userDummyData.id
       });
 
-      const chartData = await portfolioCalculator.getChartData({
-        start: parseDate('2022-03-07')
-      });
-
-      const portfolioSnapshot = await portfolioCalculator.computeSnapshot(
-        parseDate('2022-03-07')
-      );
+      const portfolioSnapshot = await portfolioCalculator.computeSnapshot();
 
       const investments = portfolioCalculator.getInvestments();
 
       const investmentsByMonth = portfolioCalculator.getInvestmentsByGroup({
-        data: chartData,
+        data: portfolioSnapshot.historicalData,
         groupBy: 'month'
       });
 
-      spy.mockRestore();
-
-      expect(portfolioSnapshot).toEqual({
+      expect(portfolioSnapshot).toMatchObject({
         currentValueInBaseCurrency: new Big('87.8'),
         errors: [],
-        grossPerformance: new Big('21.93'),
-        grossPerformancePercentage: new Big('0.15113417083448194384'),
-        grossPerformancePercentageWithCurrencyEffect: new Big(
-          '0.15113417083448194384'
-        ),
-        grossPerformanceWithCurrencyEffect: new Big('21.93'),
         hasErrors: false,
-        netPerformance: new Big('17.68'),
-        netPerformancePercentage: new Big('0.12184460284330327256'),
-        netPerformancePercentageWithCurrencyEffect: new Big(
-          '0.12184460284330327256'
-        ),
-        netPerformanceWithCurrencyEffect: new Big('17.68'),
         positions: [
           {
             averagePrice: new Big('75.80'),
@@ -165,10 +155,12 @@ describe('PortfolioCalculator', () => {
             investmentWithCurrencyEffect: new Big('75.80'),
             netPerformance: new Big('17.68'),
             netPerformancePercentage: new Big('0.12184460284330327256'),
-            netPerformancePercentageWithCurrencyEffect: new Big(
-              '0.12184460284330327256'
-            ),
-            netPerformanceWithCurrencyEffect: new Big('17.68'),
+            netPerformancePercentageWithCurrencyEffectMap: {
+              max: new Big('0.12348284960422163588')
+            },
+            netPerformanceWithCurrencyEffectMap: {
+              max: new Big('17.68')
+            },
             marketPrice: 87.8,
             marketPriceInBaseCurrency: 87.8,
             quantity: new Big('1'),
@@ -189,6 +181,16 @@ describe('PortfolioCalculator', () => {
         totalLiabilitiesWithCurrencyEffect: new Big('0'),
         totalValuablesWithCurrencyEffect: new Big('0')
       });
+
+      expect(last(portfolioSnapshot.historicalData)).toMatchObject(
+        expect.objectContaining({
+          netPerformance: 17.68,
+          netPerformanceInPercentage: 0.12184460284330327256,
+          netPerformanceInPercentageWithCurrencyEffect: 0.12184460284330327256,
+          netPerformanceWithCurrencyEffect: 17.68,
+          totalInvestmentValueWithCurrencyEffect: 75.8
+        })
+      );
 
       expect(investments).toEqual([
         { date: '2022-03-07', investment: new Big('151.6') },

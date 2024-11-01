@@ -1,3 +1,4 @@
+import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
 import { DataService } from '@ghostfolio/client/services/data.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { getDateFormatString } from '@ghostfolio/common/helper';
@@ -8,8 +9,7 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  OnDestroy,
-  OnInit
+  OnDestroy
 } from '@angular/core';
 import {
   MatSnackBar,
@@ -26,7 +26,7 @@ import { catchError, switchMap, takeUntil } from 'rxjs/operators';
   styleUrls: ['./user-account-membership.scss'],
   templateUrl: './user-account-membership.html'
 })
-export class UserAccountMembershipComponent implements OnDestroy, OnInit {
+export class UserAccountMembershipComponent implements OnDestroy {
   public baseCurrency: string;
   public coupon: number;
   public couponId: string;
@@ -35,7 +35,7 @@ export class UserAccountMembershipComponent implements OnDestroy, OnInit {
   public hasPermissionToUpdateUserSettings: boolean;
   public price: number;
   public priceId: string;
-  public routerLinkPricing = ['/' + $localize`pricing`];
+  public routerLinkPricing = ['/' + $localize`:snake-case:pricing`];
   public snackBarRef: MatSnackBarRef<TextOnlySnackBar>;
   public trySubscriptionMail =
     'mailto:hi@ghostfol.io?Subject=Ghostfolio Premium Trial&body=Hello%0D%0DI am interested in Ghostfolio Premium. Can you please send me a coupon code to try it for some time?%0D%0DKind regards';
@@ -46,6 +46,7 @@ export class UserAccountMembershipComponent implements OnDestroy, OnInit {
   public constructor(
     private changeDetectorRef: ChangeDetectorRef,
     private dataService: DataService,
+    private notificationService: NotificationService,
     private snackBar: MatSnackBar,
     private stripeService: StripeService,
     private userService: UserService
@@ -86,8 +87,6 @@ export class UserAccountMembershipComponent implements OnDestroy, OnInit {
       });
   }
 
-  public ngOnInit() {}
-
   public onCheckout() {
     this.dataService
       .createCheckoutSession({ couponId: this.couponId, priceId: this.priceId })
@@ -96,13 +95,18 @@ export class UserAccountMembershipComponent implements OnDestroy, OnInit {
           return this.stripeService.redirectToCheckout({ sessionId });
         }),
         catchError((error) => {
-          alert(error.message);
+          this.notificationService.alert({
+            title: error.message
+          });
+
           throw error;
         })
       )
       .subscribe((result) => {
         if (result.error) {
-          alert(result.error.message);
+          this.notificationService.alert({
+            title: result.error.message
+          });
         }
       });
   }

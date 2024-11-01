@@ -3,8 +3,8 @@ import { CurrentRateService } from '@ghostfolio/api/app/portfolio/current-rate.s
 import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
-import { HistoricalDataItem } from '@ghostfolio/common/interfaces';
-import { DateRange, UserWithSettings } from '@ghostfolio/common/types';
+import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
+import { Filter, HistoricalDataItem } from '@ghostfolio/common/interfaces';
 
 import { Injectable } from '@nestjs/common';
 
@@ -23,6 +23,7 @@ export class PortfolioCalculatorFactory {
     private readonly configurationService: ConfigurationService,
     private readonly currentRateService: CurrentRateService,
     private readonly exchangeRateDataService: ExchangeRateDataService,
+    private readonly portfolioSnapshotService: PortfolioSnapshotService,
     private readonly redisCacheService: RedisCacheService
   ) {}
 
@@ -31,34 +32,28 @@ export class PortfolioCalculatorFactory {
     activities,
     calculationType,
     currency,
-    dateRange = 'max',
-    hasFilters,
-    isExperimentalFeatures = false,
+    filters = [],
     userId
   }: {
     accountBalanceItems?: HistoricalDataItem[];
     activities: Activity[];
     calculationType: PerformanceCalculationType;
     currency: string;
-    dateRange?: DateRange;
-    hasFilters: boolean;
-    isExperimentalFeatures?: boolean;
+    filters?: Filter[];
     userId: string;
   }): PortfolioCalculator {
-    const useCache = !hasFilters && isExperimentalFeatures;
-
     switch (calculationType) {
       case PerformanceCalculationType.MWR:
         return new MWRPortfolioCalculator({
           accountBalanceItems,
           activities,
           currency,
-          dateRange,
-          useCache,
+          filters,
           userId,
           configurationService: this.configurationService,
           currentRateService: this.currentRateService,
           exchangeRateDataService: this.exchangeRateDataService,
+          portfolioSnapshotService: this.portfolioSnapshotService,
           redisCacheService: this.redisCacheService
         });
       case PerformanceCalculationType.TWR:
@@ -67,11 +62,11 @@ export class PortfolioCalculatorFactory {
           activities,
           currency,
           currentRateService: this.currentRateService,
-          dateRange,
-          useCache,
+          filters,
           userId,
           configurationService: this.configurationService,
           exchangeRateDataService: this.exchangeRateDataService,
+          portfolioSnapshotService: this.portfolioSnapshotService,
           redisCacheService: this.redisCacheService
         });
       default:

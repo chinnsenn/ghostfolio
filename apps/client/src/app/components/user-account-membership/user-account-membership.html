@@ -16,7 +16,8 @@
                   <ng-container i18n>Upgrade Plan</ng-container>
                 } @else if (
                   user.subscription.offer === 'renewal' ||
-                  user.subscription.offer === 'renewal-early-bird'
+                  user.subscription.offer === 'renewal-early-bird-2023' ||
+                  user.subscription.offer === 'renewal-early-bird-2024'
                 ) {
                   <ng-container i18n>Renew Plan</ng-container>
                 }
@@ -55,6 +56,10 @@
                 >
               }
             </div>
+          </div>
+        } @else {
+          <div class="mt-3 text-muted">
+            <small i18n>No auto-renewal.</small>
           </div>
         }
       </div>

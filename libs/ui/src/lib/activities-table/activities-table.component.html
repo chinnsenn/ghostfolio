@@ -55,6 +55,7 @@
           </span>
         </button>
       }
+      <hr class="m-0" />
       <button
         class="align-items-center d-flex"
         mat-menu-item
@@ -445,6 +446,7 @@
               <span i18n>Export Draft as ICS</span>
             </span>
           </button>
+          <hr class="m-0" />
           <button
             mat-menu-item
             [disabled]="!hasPermissionToDeleteActivity"
@@ -466,11 +468,9 @@
       [ngClass]="{
         'cursor-pointer':
           hasPermissionToOpenDetails &&
-          !row.isDraft &&
-          row.type !== 'FEE' &&
-          row.type !== 'INTEREST' &&
-          row.type !== 'ITEM' &&
-          row.type !== 'LIABILITY'
+          row.Account?.isExcluded !== true &&
+          row.isDraft === false &&
+          ['BUY', 'DIVIDEND', 'SELL'].includes(row.type)
       }"
       (click)="onClickActivity(row)"
     ></tr>

@@ -10,8 +10,8 @@
 [**Blog**](https://ghostfol.io/en/blog) | [**Slack**](https://join.slack.com/t/ghostfolio/shared_invite/zt-vsaan64h-F_I0fEo5M0P88lP9ibCxFg) | [**X**](https://x.com/ghostfolio_)
 
 [![Shield: Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-Support-yellow?logo=buymeacoffee)](https://www.buymeacoffee.com/ghostfolio)
-[![Shield: Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-orange.svg)](#contributing)
-[![Shield: License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Shield: Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-limegreen.svg)](#contributing) [![Shield: Docker Pulls](https://img.shields.io/docker/pulls/ghostfolio/ghostfolio?label=Docker%20Pulls)](https://hub.docker.com/r/ghostfolio/ghostfolio)
+[![Shield: License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-orange.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 </div>
 
@@ -85,23 +85,24 @@ We provide official container images hosted on [Docker Hub](https://hub.docker.c
 
 ### Supported Environment Variables
 
-| Name                     | Type                | Default Value | Description                                                                                                                         |
-| ------------------------ | ------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `ACCESS_TOKEN_SALT`      | `string`            |               | A random string used as salt for access tokens                                                                                      |
-| `API_KEY_COINGECKO_DEMO` | `string` (optional) |               | The _CoinGecko_ Demo API key                                                                                                        |
-| `API_KEY_COINGECKO_PRO`  | `string` (optional) |               | The _CoinGecko_ Pro API key                                                                                                         |
-| `DATABASE_URL`           | `string`            |               | The database connection URL, e.g. `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}?sslmode=prefer` |
-| `HOST`                   | `string` (optional) | `0.0.0.0`     | The host where the Ghostfolio application will run on                                                                               |
-| `JWT_SECRET_KEY`         | `string`            |               | A random string used for _JSON Web Tokens_ (JWT)                                                                                    |
-| `PORT`                   | `number` (optional) | `3333`        | The port where the Ghostfolio application will run on                                                                               |
-| `POSTGRES_DB`            | `string`            |               | The name of the _PostgreSQL_ database                                                                                               |
-| `POSTGRES_PASSWORD`      | `string`            |               | The password of the _PostgreSQL_ database                                                                                           |
-| `POSTGRES_USER`          | `string`            |               | The user of the _PostgreSQL_ database                                                                                               |
-| `REDIS_DB`               | `number` (optional) | `0`           | The database index of _Redis_                                                                                                       |
-| `REDIS_HOST`             | `string`            |               | The host where _Redis_ is running                                                                                                   |
-| `REDIS_PASSWORD`         | `string`            |               | The password of _Redis_                                                                                                             |
-| `REDIS_PORT`             | `number`            |               | The port where _Redis_ is running                                                                                                   |
-| `REQUEST_TIMEOUT`        | `number` (optional) | `2000`        | The timeout of network requests to data providers in milliseconds                                                                   |
+| Name                     | Type                  | Default Value | Description                                                                                                                         |
+| ------------------------ | --------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `ACCESS_TOKEN_SALT`      | `string`              |               | A random string used as salt for access tokens                                                                                      |
+| `API_KEY_COINGECKO_DEMO` | `string` (optional)   |               | The _CoinGecko_ Demo API key                                                                                                        |
+| `API_KEY_COINGECKO_PRO`  | `string` (optional)   |               | The _CoinGecko_ Pro API key                                                                                                         |
+| `DATABASE_URL`           | `string`              |               | The database connection URL, e.g. `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}?sslmode=prefer` |
+| `HOST`                   | `string` (optional)   | `0.0.0.0`     | The host where the Ghostfolio application will run on                                                                               |
+| `JWT_SECRET_KEY`         | `string`              |               | A random string used for _JSON Web Tokens_ (JWT)                                                                                    |
+| `LOG_LEVELS`             | `string[]` (optional) |               | The logging levels for the Ghostfolio application, e.g. `["debug","error","log","warn"]`                                            |
+| `PORT`                   | `number` (optional)   | `3333`        | The port where the Ghostfolio application will run on                                                                               |
+| `POSTGRES_DB`            | `string`              |               | The name of the _PostgreSQL_ database                                                                                               |
+| `POSTGRES_PASSWORD`      | `string`              |               | The password of the _PostgreSQL_ database                                                                                           |
+| `POSTGRES_USER`          | `string`              |               | The user of the _PostgreSQL_ database                                                                                               |
+| `REDIS_DB`               | `number` (optional)   | `0`           | The database index of _Redis_                                                                                                       |
+| `REDIS_HOST`             | `string`              |               | The host where _Redis_ is running                                                                                                   |
+| `REDIS_PASSWORD`         | `string`              |               | The password of _Redis_                                                                                                             |
+| `REDIS_PORT`             | `number`              |               | The port where _Redis_ is running                                                                                                   |
+| `REQUEST_TIMEOUT`        | `number` (optional)   | `2000`        | The timeout of network requests to data providers in milliseconds                                                                   |
 
 ### Run with Docker Compose
 
@@ -146,52 +147,7 @@ Ghostfolio is available for various home server systems, including [CasaOS](http
 
 ## Development
 
-### Prerequisites
-
-- [Docker](https://www.docker.com/products/docker-desktop)
-- [Node.js](https://nodejs.org/en/download) (version 20+)
-- Create a local copy of this Git repository (clone)
-- Copy the file `.env.dev` to `.env` and populate it with your data (`cp .env.dev .env`)
-
-### Setup
-
-1. Run `npm install`
-1. Run `docker compose --env-file ./.env -f docker/docker-compose.dev.yml up -d` to start [PostgreSQL](https://www.postgresql.org) and [Redis](https://redis.io)
-1. Run `npm run database:setup` to initialize the database schema
-1. Run `git config core.hooksPath ./git-hooks/` to setup git hooks
-1. Start the server and the client (see [_Development_](#Development))
-1. Open https://localhost:4200/en in your browser
-1. Create a new user via _Get Started_ (this first user will get the role `ADMIN`)
-
-### Start Server
-
-#### Debug
-
-Run `npm run watch:server` and click _Debug API_ in [Visual Studio Code](https://code.visualstudio.com)
-
-#### Serve
-
-Run `npm run start:server`
-
-### Start Client
-
-Run `npm run start:client` and open https://localhost:4200/en in your browser
-
-### Start _Storybook_
-
-Run `npm run start:storybook`
-
-### Migrate Database
-
-With the following command you can keep your database schema in sync:
-
-```bash
-npm run database:push
-```
-
-## Testing
-
-Run `npm test`
+For detailed information on the environment setup and development process, please refer to [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 ## Public API
 
@@ -207,7 +163,31 @@ You can get the _Bearer Token_ via `POST http://localhost:3333/api/v1/auth/anony
 
 Deprecated: `GET http://localhost:3333/api/v1/auth/anonymous/<INSERT_SECURITY_TOKEN_OF_ACCOUNT>` or `curl -s http://localhost:3333/api/v1/auth/anonymous/<INSERT_SECURITY_TOKEN_OF_ACCOUNT>`.
 
+### Health Check (experimental)
+
+#### Request
+
+`GET http://localhost:3333/api/v1/health`
+
+**Info:** No Bearer Token is required for health check
+
+#### Response
+
+##### Success
+
+`200 OK`
+
+```
+{
+  "status": "OK"
+}
+```
+
 ### Import Activities
+
+#### Prerequisites
+
+[Bearer Token](#authorization-bearer-token) for authorization
 
 #### Request
 
@@ -261,6 +241,38 @@ Deprecated: `GET http://localhost:3333/api/v1/auth/anonymous/<INSERT_SECURITY_TO
   "message": [
     "activities.1 is a duplicate activity"
   ]
+}
+```
+
+### Portfolio (experimental)
+
+#### Prerequisites
+
+Grant access of type _Public_ in the _Access_ tab of _My Ghostfolio_.
+
+#### Request
+
+`GET http://localhost:3333/api/v1/public/<INSERT_ACCESS_ID>/portfolio`
+
+**Info:** No Bearer Token is required for authorization
+
+#### Response
+
+##### Success
+
+```
+{
+  "performance": {
+    "1d": {
+      "relativeChange": 0 // normalized from -1 to 1
+    };
+    "ytd": {
+      "relativeChange": 0 // normalized from -1 to 1
+    },
+    "max": {
+      "relativeChange": 0 // normalized from -1 to 1
+    }
+  }
 }
 ```
 

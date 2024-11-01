@@ -1,5 +1,7 @@
 import { CreateTagDto } from '@ghostfolio/api/app/tag/create-tag.dto';
 import { UpdateTagDto } from '@ghostfolio/api/app/tag/update-tag.dto';
+import { ConfirmationDialogType } from '@ghostfolio/client/core/notification/confirmation-dialog/confirmation-dialog.type';
+import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
 import { AdminService } from '@ghostfolio/client/services/admin.service';
 import { DataService } from '@ghostfolio/client/services/data.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
@@ -32,9 +34,9 @@ import { CreateOrUpdateTagDialog } from './create-or-update-tag-dialog/create-or
 export class AdminTagComponent implements OnInit, OnDestroy {
   @ViewChild(MatSort) sort: MatSort;
 
-  public dataSource: MatTableDataSource<Tag> = new MatTableDataSource();
+  public dataSource = new MatTableDataSource<Tag>();
   public deviceType: string;
-  public displayedColumns = ['name', 'activities', 'actions'];
+  public displayedColumns = ['name', 'userId', 'activities', 'actions'];
   public tags: Tag[];
 
   private unsubscribeSubject = new Subject<void>();
@@ -45,6 +47,7 @@ export class AdminTagComponent implements OnInit, OnDestroy {
     private dataService: DataService,
     private deviceService: DeviceDetectorService,
     private dialog: MatDialog,
+    private notificationService: NotificationService,
     private route: ActivatedRoute,
     private router: Router,
     private userService: UserService
@@ -75,13 +78,13 @@ export class AdminTagComponent implements OnInit, OnDestroy {
   }
 
   public onDeleteTag(aId: string) {
-    const confirmation = confirm(
-      $localize`Do you really want to delete this tag?`
-    );
-
-    if (confirmation) {
-      this.deleteTag(aId);
-    }
+    this.notificationService.confirm({
+      confirmFn: () => {
+        this.deleteTag(aId);
+      },
+      confirmType: ConfirmationDialogType.Warn,
+      title: $localize`Do you really want to delete this tag?`
+    });
   }
 
   public onUpdateTag({ id }: Tag) {
@@ -135,7 +138,7 @@ export class AdminTagComponent implements OnInit, OnDestroy {
           name: null
         }
       },
-      height: this.deviceType === 'mobile' ? '97.5vh' : '80vh',
+      height: this.deviceType === 'mobile' ? '98vh' : undefined,
       width: this.deviceType === 'mobile' ? '100vw' : '50rem'
     });
 
@@ -171,7 +174,7 @@ export class AdminTagComponent implements OnInit, OnDestroy {
           name
         }
       },
-      height: this.deviceType === 'mobile' ? '97.5vh' : '80vh',
+      height: this.deviceType === 'mobile' ? '98vh' : undefined,
       width: this.deviceType === 'mobile' ? '100vw' : '50rem'
     });
 

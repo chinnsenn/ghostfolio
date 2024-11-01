@@ -9,9 +9,9 @@ import { OrderService } from '@ghostfolio/api/app/order/order.service';
 import { PlatformService } from '@ghostfolio/api/app/platform/platform.service';
 import { PortfolioService } from '@ghostfolio/api/app/portfolio/portfolio.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
-import { DataGatheringService } from '@ghostfolio/api/services/data-gathering/data-gathering.service';
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
+import { DataGatheringService } from '@ghostfolio/api/services/queues/data-gathering/data-gathering.service';
 import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/symbol-profile.service';
 import { DATA_GATHERING_QUEUE_PRIORITY_HIGH } from '@ghostfolio/common/config';
 import {
@@ -82,60 +82,64 @@ export class ImportService {
 
       const Account = this.isUniqueAccount(accounts) ? accounts[0] : undefined;
 
-      return Object.entries(dividends).map(([dateString, { marketPrice }]) => {
-        const quantity =
-          historicalData.find((historicalDataItem) => {
-            return historicalDataItem.date === dateString;
-          })?.quantity ?? 0;
+      return await Promise.all(
+        Object.entries(dividends).map(async ([dateString, { marketPrice }]) => {
+          const quantity =
+            historicalData.find((historicalDataItem) => {
+              return historicalDataItem.date === dateString;
+            })?.quantity ?? 0;
 
-        const value = new Big(quantity).mul(marketPrice).toNumber();
+          const value = new Big(quantity).mul(marketPrice).toNumber();
 
-        const date = parseDate(dateString);
-        const isDuplicate = orders.some((activity) => {
-          return (
-            activity.accountId === Account?.id &&
-            activity.SymbolProfile.currency === assetProfile.currency &&
-            activity.SymbolProfile.dataSource === assetProfile.dataSource &&
-            isSameSecond(activity.date, date) &&
-            activity.quantity === quantity &&
-            activity.SymbolProfile.symbol === assetProfile.symbol &&
-            activity.type === 'DIVIDEND' &&
-            activity.unitPrice === marketPrice
-          );
-        });
+          const date = parseDate(dateString);
+          const isDuplicate = orders.some((activity) => {
+            return (
+              activity.accountId === Account?.id &&
+              activity.SymbolProfile.currency === assetProfile.currency &&
+              activity.SymbolProfile.dataSource === assetProfile.dataSource &&
+              isSameSecond(activity.date, date) &&
+              activity.quantity === quantity &&
+              activity.SymbolProfile.symbol === assetProfile.symbol &&
+              activity.type === 'DIVIDEND' &&
+              activity.unitPrice === marketPrice
+            );
+          });
 
-        const error: ActivityError = isDuplicate
-          ? { code: 'IS_DUPLICATE' }
-          : undefined;
+          const error: ActivityError = isDuplicate
+            ? { code: 'IS_DUPLICATE' }
+            : undefined;
 
-        return {
-          Account,
-          date,
-          error,
-          quantity,
-          value,
-          accountId: Account?.id,
-          accountUserId: undefined,
-          comment: undefined,
-          currency: undefined,
-          createdAt: undefined,
-          fee: 0,
-          feeInBaseCurrency: 0,
-          id: assetProfile.id,
-          isDraft: false,
-          SymbolProfile: assetProfile,
-          symbolProfileId: assetProfile.id,
-          type: 'DIVIDEND',
-          unitPrice: marketPrice,
-          updatedAt: undefined,
-          userId: Account?.userId,
-          valueInBaseCurrency: this.exchangeRateDataService.toCurrency(
+          return {
+            Account,
+            date,
+            error,
+            quantity,
             value,
-            assetProfile.currency,
-            userCurrency
-          )
-        };
-      });
+            accountId: Account?.id,
+            accountUserId: undefined,
+            comment: undefined,
+            currency: undefined,
+            createdAt: undefined,
+            fee: 0,
+            feeInBaseCurrency: 0,
+            id: assetProfile.id,
+            isDraft: false,
+            SymbolProfile: assetProfile,
+            symbolProfileId: assetProfile.id,
+            type: 'DIVIDEND',
+            unitPrice: marketPrice,
+            updatedAt: undefined,
+            userId: Account?.userId,
+            valueInBaseCurrency:
+              await this.exchangeRateDataService.toCurrencyAtDate(
+                value,
+                assetProfile.currency,
+                userCurrency,
+                date
+              )
+          };
+        })
+      );
     } catch {
       return [];
     }
@@ -262,21 +266,18 @@ export class ImportService {
 
     const activities: Activity[] = [];
 
-    for (let [
-      index,
-      {
-        accountId,
-        comment,
-        currency,
-        date,
-        error,
-        fee,
-        quantity,
-        SymbolProfile,
-        type,
-        unitPrice
-      }
-    ] of activitiesExtendedWithErrors.entries()) {
+    for (const [index, activity] of activitiesExtendedWithErrors.entries()) {
+      const accountId = activity.accountId;
+      const comment = activity.comment;
+      const currency = activity.currency;
+      const date = activity.date;
+      const error = activity.error;
+      let fee = activity.fee;
+      const quantity = activity.quantity;
+      const SymbolProfile = activity.SymbolProfile;
+      const type = activity.type;
+      let unitPrice = activity.unitPrice;
+
       const assetProfile = assetProfiles[
         getAssetProfileIdentifier({
           dataSource: SymbolProfile.dataSource,
@@ -432,18 +433,21 @@ export class ImportService {
         ...order,
         error,
         value,
-        feeInBaseCurrency: this.exchangeRateDataService.toCurrency(
+        feeInBaseCurrency: await this.exchangeRateDataService.toCurrencyAtDate(
           fee,
           assetProfile.currency,
-          userCurrency
+          userCurrency,
+          date
         ),
         // @ts-ignore
         SymbolProfile: assetProfile,
-        valueInBaseCurrency: this.exchangeRateDataService.toCurrency(
-          value,
-          assetProfile.currency,
-          userCurrency
-        )
+        valueInBaseCurrency:
+          await this.exchangeRateDataService.toCurrencyAtDate(
+            value,
+            assetProfile.currency,
+            userCurrency,
+            date
+          )
       });
     }
 
@@ -484,12 +488,13 @@ export class ImportService {
     userCurrency: string;
     userId: string;
   }): Promise<Partial<Activity>[]> {
-    let { activities: existingActivities } = await this.orderService.getOrders({
-      userCurrency,
-      userId,
-      includeDrafts: true,
-      withExcludedAccounts: true
-    });
+    const { activities: existingActivities } =
+      await this.orderService.getOrders({
+        userCurrency,
+        userId,
+        includeDrafts: true,
+        withExcludedAccounts: true
+      });
 
     return activitiesDto.map(
       ({

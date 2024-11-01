@@ -1,9 +1,11 @@
+import { ConfirmationDialogType } from '@ghostfolio/client/core/notification/confirmation-dialog/confirmation-dialog.type';
+import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
 import { AdminService } from '@ghostfolio/client/services/admin.service';
 import { DataService } from '@ghostfolio/client/services/data.service';
 import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { getDateFormatString, getEmojiFlag } from '@ghostfolio/common/helper';
-import { AdminData, InfoItem, User } from '@ghostfolio/common/interfaces';
+import { AdminUsers, InfoItem, User } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
@@ -22,14 +24,14 @@ import { takeUntil } from 'rxjs/operators';
   templateUrl: './admin-users.html'
 })
 export class AdminUsersComponent implements OnDestroy, OnInit {
-  public dataSource: MatTableDataSource<AdminData['users'][0]> =
-    new MatTableDataSource();
+  public dataSource = new MatTableDataSource<AdminUsers['users'][0]>();
   public defaultDateFormat: string;
   public displayedColumns: string[] = [];
   public getEmojiFlag = getEmojiFlag;
   public hasPermissionForSubscription: boolean;
   public hasPermissionToImpersonateAllUsers: boolean;
   public info: InfoItem;
+  public isLoading = false;
   public user: User;
 
   private unsubscribeSubject = new Subject<void>();
@@ -39,6 +41,7 @@ export class AdminUsersComponent implements OnDestroy, OnInit {
     private changeDetectorRef: ChangeDetectorRef,
     private dataService: DataService,
     private impersonationStorageService: ImpersonationStorageService,
+    private notificationService: NotificationService,
     private userService: UserService
   ) {
     this.info = this.dataService.fetchInfo();
@@ -90,7 +93,7 @@ export class AdminUsersComponent implements OnDestroy, OnInit {
   }
 
   public ngOnInit() {
-    this.fetchAdminData();
+    this.fetchUsers();
   }
 
   public formatDistanceToNow(aDateString: string) {
@@ -109,20 +112,18 @@ export class AdminUsersComponent implements OnDestroy, OnInit {
   }
 
   public onDeleteUser(aId: string) {
-    const confirmation = confirm(
-      $localize`Do you really want to delete this user?`
-    );
-
-    if (confirmation) {
-      this.dataService
-        .deleteUser(aId)
-        .pipe(takeUntil(this.unsubscribeSubject))
-        .subscribe({
-          next: () => {
-            this.fetchAdminData();
-          }
-        });
-    }
+    this.notificationService.confirm({
+      confirmFn: () => {
+        this.dataService
+          .deleteUser(aId)
+          .pipe(takeUntil(this.unsubscribeSubject))
+          .subscribe(() => {
+            this.fetchUsers();
+          });
+      },
+      confirmType: ConfirmationDialogType.Warn,
+      title: $localize`Do you really want to delete this user?`
+    });
   }
 
   public onImpersonateUser(aId: string) {
@@ -140,12 +141,16 @@ export class AdminUsersComponent implements OnDestroy, OnInit {
     this.unsubscribeSubject.complete();
   }
 
-  private fetchAdminData() {
+  private fetchUsers() {
+    this.isLoading = true;
+
     this.adminService
-      .fetchAdminData()
+      .fetchUsers()
       .pipe(takeUntil(this.unsubscribeSubject))
       .subscribe(({ users }) => {
         this.dataSource = new MatTableDataSource(users);
+
+        this.isLoading = false;
 
         this.changeDetectorRef.markForCheck();
       });

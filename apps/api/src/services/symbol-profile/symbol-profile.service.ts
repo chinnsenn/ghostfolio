@@ -176,7 +176,7 @@ export class SymbolProfileService {
         countries: this.getCountries(
           symbolProfile?.countries as unknown as Prisma.JsonArray
         ),
-        dateOfFirstActivity: <Date>undefined,
+        dateOfFirstActivity: undefined as Date,
         holdings: this.getHoldings(symbolProfile),
         scraperConfiguration: this.getScraperConfiguration(symbolProfile),
         sectors: this.getSectors(symbolProfile),
@@ -275,6 +275,8 @@ export class SymbolProfileService {
         headers:
           scraperConfiguration.headers as ScraperConfiguration['headers'],
         locale: scraperConfiguration.locale as string,
+        mode:
+          (scraperConfiguration.mode as ScraperConfiguration['mode']) ?? 'lazy',
         selector: scraperConfiguration.selector as string,
         url: scraperConfiguration.url as string
       };

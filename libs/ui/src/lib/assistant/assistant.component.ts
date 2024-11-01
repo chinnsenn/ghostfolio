@@ -36,7 +36,6 @@ import { MatMenuTrigger } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
 import { RouterModule } from '@angular/router';
 import { Account, AssetClass } from '@prisma/client';
-import { eachYearOfInterval, format } from 'date-fns';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import { EMPTY, Observable, Subject, lastValueFrom } from 'rxjs';
 import {
@@ -110,6 +109,8 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
 
   @Input() deviceType: string;
   @Input() hasPermissionToAccessAdminControl: boolean;
+  @Input() hasPermissionToChangeDateRange: boolean;
+  @Input() hasPermissionToChangeFilters: boolean;
   @Input() user: User;
 
   @Output() closed = new EventEmitter<void>();
@@ -155,19 +156,11 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
   ) {}
 
   public ngOnInit() {
-    this.accounts = this.user?.accounts;
     this.assetClasses = Object.keys(AssetClass).map((assetClass) => {
       return {
         id: assetClass,
         label: translate(assetClass),
         type: 'ASSET_CLASS'
-      };
-    });
-    this.tags = this.user?.tags.map(({ id, name }) => {
-      return {
-        id,
-        label: translate(name),
-        type: 'TAG'
       };
     });
 
@@ -187,10 +180,10 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
         debounceTime(300),
         distinctUntilChanged(),
         mergeMap(async (searchTerm) => {
-          const result = <ISearchResults>{
+          const result = {
             assetProfiles: [],
             holdings: []
-          };
+          } as ISearchResults;
 
           try {
             if (searchTerm) {
@@ -211,6 +204,8 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
   }
 
   public ngOnChanges() {
+    this.accounts = this.user?.accounts ?? [];
+
     this.dateRangeOptions = [
       { label: $localize`Today`, value: '1d' },
       {
@@ -231,19 +226,20 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
       }
     ];
 
-    if (this.user?.settings?.isExperimentalFeatures) {
-      this.dateRangeOptions = this.dateRangeOptions.concat(
-        eachYearOfInterval({
-          end: new Date(),
-          start: this.user?.dateOfFirstActivity ?? new Date()
-        })
-          .map((date) => {
-            return { label: format(date, 'yyyy'), value: format(date, 'yyyy') };
-          })
-          .slice(0, -1)
-          .reverse()
-      );
-    }
+    // TODO
+    // if (this.user?.settings?.isExperimentalFeatures) {
+    //   this.dateRangeOptions = this.dateRangeOptions.concat(
+    //     eachYearOfInterval({
+    //       end: new Date(),
+    //       start: this.user?.dateOfFirstActivity ?? new Date()
+    //     })
+    //       .map((date) => {
+    //         return { label: format(date, 'yyyy'), value: format(date, 'yyyy') };
+    //       })
+    //       .slice(0, -1)
+    //       .reverse()
+    //   );
+    // }
 
     this.dateRangeOptions = this.dateRangeOptions.concat([
       {
@@ -253,7 +249,19 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
       { label: $localize`Max`, value: 'max' }
     ]);
 
+    this.dateRangeFormControl.disable({ emitEvent: false });
+
+    if (this.hasPermissionToChangeDateRange) {
+      this.dateRangeFormControl.enable({ emitEvent: false });
+    }
+
     this.dateRangeFormControl.setValue(this.user?.settings?.dateRange ?? null);
+
+    this.filterForm.disable({ emitEvent: false });
+
+    if (this.hasPermissionToChangeFilters) {
+      this.filterForm.enable({ emitEvent: false });
+    }
 
     this.filterForm.setValue(
       {
@@ -265,6 +273,23 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
         emitEvent: false
       }
     );
+
+    this.tags =
+      this.user?.tags
+        ?.filter(({ isUsed }) => {
+          return isUsed;
+        })
+        .map(({ id, name }) => {
+          return {
+            id,
+            label: translate(name),
+            type: 'TAG'
+          };
+        }) ?? [];
+
+    if (this.tags.length === 0) {
+      this.filterForm.get('tag').disable({ emitEvent: false });
+    }
   }
 
   public hasFilter(aFormValue: { [key: string]: string }) {

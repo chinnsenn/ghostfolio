@@ -1,8 +1,9 @@
 import { AccountService } from '@ghostfolio/api/app/account/account.service';
 import { PortfolioChangedEvent } from '@ghostfolio/api/events/portfolio-changed.event';
-import { DataGatheringService } from '@ghostfolio/api/services/data-gathering/data-gathering.service';
+import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
+import { DataGatheringService } from '@ghostfolio/api/services/queues/data-gathering/data-gathering.service';
 import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/symbol-profile.service';
 import {
   DATA_GATHERING_QUEUE_PRIORITY_HIGH,
@@ -349,6 +350,14 @@ export class OrderService {
       return type;
     });
 
+    const filterByDataSource = filters?.find(({ type }) => {
+      return type === 'DATA_SOURCE';
+    })?.id;
+
+    const filterBySymbol = filters?.find(({ type }) => {
+      return type === 'SYMBOL';
+    })?.id;
+
     const searchQuery = filters?.find(({ type }) => {
       return type === 'SEARCH_QUERY';
     })?.id;
@@ -392,6 +401,29 @@ export class OrderService {
           }
         ]
       };
+    }
+
+    if (filterByDataSource && filterBySymbol) {
+      if (where.SymbolProfile) {
+        where.SymbolProfile = {
+          AND: [
+            where.SymbolProfile,
+            {
+              AND: [
+                { dataSource: filterByDataSource as DataSource },
+                { symbol: filterBySymbol }
+              ]
+            }
+          ]
+        };
+      } else {
+        where.SymbolProfile = {
+          AND: [
+            { dataSource: filterByDataSource as DataSource },
+            { symbol: filterBySymbol }
+          ]
+        };
+      }
     }
 
     if (searchQuery) {
@@ -483,36 +515,58 @@ export class OrderService {
       assetProfileIdentifiers
     );
 
-    const activities = orders.map((order) => {
-      const assetProfile = assetProfiles.find(({ dataSource, symbol }) => {
-        return (
-          dataSource === order.SymbolProfile.dataSource &&
-          symbol === order.SymbolProfile.symbol
-        );
-      });
+    const activities = await Promise.all(
+      orders.map(async (order) => {
+        const assetProfile = assetProfiles.find(({ dataSource, symbol }) => {
+          return (
+            dataSource === order.SymbolProfile.dataSource &&
+            symbol === order.SymbolProfile.symbol
+          );
+        });
 
-      const value = new Big(order.quantity).mul(order.unitPrice).toNumber();
+        const value = new Big(order.quantity).mul(order.unitPrice).toNumber();
 
-      return {
-        ...order,
-        value,
-        // TODO: Use exchange rate of date
-        feeInBaseCurrency: this.exchangeRateDataService.toCurrency(
-          order.fee,
-          order.SymbolProfile.currency,
-          userCurrency
-        ),
-        SymbolProfile: assetProfile,
-        // TODO: Use exchange rate of date
-        valueInBaseCurrency: this.exchangeRateDataService.toCurrency(
+        return {
+          ...order,
           value,
-          order.SymbolProfile.currency,
-          userCurrency
-        )
-      };
-    });
+          feeInBaseCurrency:
+            await this.exchangeRateDataService.toCurrencyAtDate(
+              order.fee,
+              order.SymbolProfile.currency,
+              userCurrency,
+              order.date
+            ),
+          SymbolProfile: assetProfile,
+          valueInBaseCurrency:
+            await this.exchangeRateDataService.toCurrencyAtDate(
+              value,
+              order.SymbolProfile.currency,
+              userCurrency,
+              order.date
+            )
+        };
+      })
+    );
 
     return { activities, count };
+  }
+
+  @LogPerformance
+  public async getOrdersForPortfolioCalculator({
+    filters,
+    userCurrency,
+    userId
+  }: {
+    filters?: Filter[];
+    userCurrency: string;
+    userId: string;
+  }) {
+    return this.getOrders({
+      filters,
+      userCurrency,
+      userId,
+      withExcludedAccounts: false // TODO
+    });
   }
 
   public async getStatisticsByCurrency(
@@ -584,7 +638,7 @@ export class OrderService {
             {
               dataSource:
                 data.SymbolProfile.connect.dataSource_symbol.dataSource,
-              date: <Date>data.date,
+              date: data.date as Date,
               symbol: data.SymbolProfile.connect.dataSource_symbol.symbol
             }
           ],

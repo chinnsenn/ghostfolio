@@ -1,4 +1,6 @@
 import { CreateAccountBalanceDto } from '@ghostfolio/api/app/account-balance/create-account-balance.dto';
+import { ConfirmationDialogType } from '@ghostfolio/client/core/notification/confirmation-dialog/confirmation-dialog.type';
+import { NotificationService } from '@ghostfolio/client/core/notification/notification.service';
 import { validateObjectForForm } from '@ghostfolio/client/util/form.util';
 import { getLocale } from '@ghostfolio/common/helper';
 import { AccountBalancesResponse } from '@ghostfolio/common/interfaces';
@@ -72,16 +74,19 @@ export class GfAccountBalancesComponent
     date: new FormControl(new Date(), Validators.required)
   });
 
-  public dataSource: MatTableDataSource<
+  public dataSource = new MatTableDataSource<
     AccountBalancesResponse['balances'][0]
-  > = new MatTableDataSource();
+  >();
 
   public displayedColumns: string[] = ['date', 'value', 'actions'];
   public Validators = Validators;
 
   private unsubscribeSubject = new Subject<void>();
 
-  public constructor(private dateAdapter: DateAdapter<any>) {}
+  public constructor(
+    private dateAdapter: DateAdapter<any>,
+    private notificationService: NotificationService
+  ) {}
 
   public ngOnInit() {
     this.dateAdapter.setLocale(this.locale);
@@ -97,13 +102,13 @@ export class GfAccountBalancesComponent
   }
 
   public onDeleteAccountBalance(aId: string) {
-    const confirmation = confirm(
-      $localize`Do you really want to delete this account balance?`
-    );
-
-    if (confirmation) {
-      this.accountBalanceDeleted.emit(aId);
-    }
+    this.notificationService.confirm({
+      confirmFn: () => {
+        this.accountBalanceDeleted.emit(aId);
+      },
+      confirmType: ConfirmationDialogType.Warn,
+      title: $localize`Do you really want to delete this account balance?`
+    });
   }
 
   public async onSubmitAccountBalance() {

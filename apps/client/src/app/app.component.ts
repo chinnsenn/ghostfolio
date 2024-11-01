@@ -28,6 +28,7 @@ import { DeviceDetectorService } from 'ngx-device-detector';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
 
+import { NotificationService } from './core/notification/notification.service';
 import { DataService } from './services/data.service';
 import { ImpersonationStorageService } from './services/impersonation-storage.service';
 import { TokenStorageService } from './services/token-storage.service';
@@ -46,6 +47,7 @@ export class AppComponent implements OnDestroy, OnInit {
 
   public canCreateAccount: boolean;
   public currentRoute: string;
+  public currentSubRoute: string;
   public currentYear = new Date().getFullYear();
   public deviceType: string;
   public hasImpersonationId: boolean;
@@ -53,22 +55,30 @@ export class AppComponent implements OnDestroy, OnInit {
   public hasPermissionForStatistics: boolean;
   public hasPermissionForSubscription: boolean;
   public hasPermissionToAccessFearAndGreedIndex: boolean;
+  public hasPermissionToChangeDateRange: boolean;
+  public hasPermissionToChangeFilters: boolean;
   public hasTabs = false;
   public info: InfoItem;
   public pageTitle: string;
-  public routerLinkAbout = ['/' + $localize`about`];
-  public routerLinkAboutChangelog = ['/' + $localize`about`, 'changelog'];
-  public routerLinkAboutLicense = ['/' + $localize`about`, $localize`license`];
-  public routerLinkAboutPrivacyPolicy = [
-    '/' + $localize`about`,
-    $localize`privacy-policy`
+  public routerLinkAbout = ['/' + $localize`:snake-case:about`];
+  public routerLinkAboutChangelog = [
+    '/' + $localize`:snake-case:about`,
+    'changelog'
   ];
-  public routerLinkFaq = ['/' + $localize`faq`];
-  public routerLinkFeatures = ['/' + $localize`features`];
-  public routerLinkMarkets = ['/' + $localize`markets`];
-  public routerLinkPricing = ['/' + $localize`pricing`];
-  public routerLinkRegister = ['/' + $localize`register`];
-  public routerLinkResources = ['/' + $localize`resources`];
+  public routerLinkAboutLicense = [
+    '/' + $localize`:snake-case:about`,
+    $localize`:snake-case:license`
+  ];
+  public routerLinkAboutPrivacyPolicy = [
+    '/' + $localize`:snake-case:about`,
+    $localize`:snake-case:privacy-policy`
+  ];
+  public routerLinkFaq = ['/' + $localize`:snake-case:faq`];
+  public routerLinkFeatures = ['/' + $localize`:snake-case:features`];
+  public routerLinkMarkets = ['/' + $localize`:snake-case:markets`];
+  public routerLinkPricing = ['/' + $localize`:snake-case:pricing`];
+  public routerLinkRegister = ['/' + $localize`:snake-case:register`];
+  public routerLinkResources = ['/' + $localize`:snake-case:resources`];
   public showFooter = false;
   public user: User;
 
@@ -81,6 +91,7 @@ export class AppComponent implements OnDestroy, OnInit {
     private dialog: MatDialog,
     @Inject(DOCUMENT) private document: Document,
     private impersonationStorageService: ImpersonationStorageService,
+    private notificationService: NotificationService,
     private route: ActivatedRoute,
     private router: Router,
     private title: Title,
@@ -139,10 +150,40 @@ export class AppComponent implements OnDestroy, OnInit {
         const urlSegmentGroup = urlTree.root.children[PRIMARY_OUTLET];
         const urlSegments = urlSegmentGroup.segments;
         this.currentRoute = urlSegments[0].path;
+        this.currentSubRoute = urlSegments[1]?.path;
+
+        if (
+          (this.currentRoute === 'home' && !this.currentSubRoute) ||
+          (this.currentRoute === 'home' &&
+            this.currentSubRoute === 'holdings') ||
+          (this.currentRoute === 'portfolio' && !this.currentSubRoute) ||
+          (this.currentRoute === 'zen' && !this.currentSubRoute) ||
+          (this.currentRoute === 'zen' && this.currentSubRoute === 'holdings')
+        ) {
+          this.hasPermissionToChangeDateRange = true;
+        } else {
+          this.hasPermissionToChangeDateRange = false;
+        }
+
+        if (
+          (this.currentRoute === 'home' &&
+            this.currentSubRoute === 'holdings') ||
+          (this.currentRoute === 'portfolio' && !this.currentSubRoute) ||
+          (this.currentRoute === 'portfolio' &&
+            this.currentSubRoute === 'activities') ||
+          (this.currentRoute === 'portfolio' &&
+            this.currentSubRoute === 'allocations') ||
+          (this.currentRoute === 'zen' && this.currentSubRoute === 'holdings')
+        ) {
+          this.hasPermissionToChangeFilters = true;
+        } else {
+          this.hasPermissionToChangeFilters = false;
+        }
 
         this.hasTabs =
           (this.currentRoute === this.routerLinkAbout[0].slice(1) ||
             this.currentRoute === this.routerLinkFaq[0].slice(1) ||
+            this.currentRoute === this.routerLinkResources[0].slice(1) ||
             this.currentRoute === 'account' ||
             this.currentRoute === 'admin' ||
             this.currentRoute === 'home' ||
@@ -158,7 +199,6 @@ export class AppComponent implements OnDestroy, OnInit {
             this.currentRoute === 'p' ||
             this.currentRoute === this.routerLinkPricing[0].slice(1) ||
             this.currentRoute === this.routerLinkRegister[0].slice(1) ||
-            this.currentRoute === this.routerLinkResources[0].slice(1) ||
             this.currentRoute === 'start') &&
           this.deviceType !== 'mobile';
 
@@ -174,6 +214,8 @@ export class AppComponent implements OnDestroy, OnInit {
             this.changeDetectorRef.markForCheck();
           });
         }
+
+        this.changeDetectorRef.markForCheck();
       });
 
     this.userService.stateChanged
@@ -199,7 +241,9 @@ export class AppComponent implements OnDestroy, OnInit {
     if (this.user.systemMessage.routerLink) {
       this.router.navigate(this.user.systemMessage.routerLink);
     } else {
-      alert(this.user.systemMessage.message);
+      this.notificationService.alert({
+        title: this.user.systemMessage.message
+      });
     }
   }
 
@@ -248,7 +292,7 @@ export class AppComponent implements OnDestroy, OnInit {
 
         const dialogRef = this.dialog.open(GfHoldingDetailDialogComponent, {
           autoFocus: false,
-          data: <HoldingDetailDialogParams>{
+          data: {
             dataSource,
             symbol,
             baseCurrency: this.user?.settings?.baseCurrency,
@@ -268,8 +312,8 @@ export class AppComponent implements OnDestroy, OnInit {
               hasPermission(this.user?.permissions, permissions.updateOrder) &&
               !this.user?.settings?.isRestrictedView,
             locale: this.user?.settings?.locale
-          },
-          height: this.deviceType === 'mobile' ? '97.5vh' : '80vh',
+          } as HoldingDetailDialogParams,
+          height: this.deviceType === 'mobile' ? '98vh' : '80vh',
           width: this.deviceType === 'mobile' ? '100vw' : '50rem'
         });
 
@@ -296,9 +340,9 @@ export class AppComponent implements OnDestroy, OnInit {
     );
 
     if (isDarkTheme) {
-      this.document.body.classList.add('is-dark-theme');
+      this.document.body.classList.add('theme-dark');
     } else {
-      this.document.body.classList.remove('is-dark-theme');
+      this.document.body.classList.remove('theme-dark');
     }
 
     this.document
