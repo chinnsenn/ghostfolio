@@ -429,8 +429,14 @@ export class AdminService {
     };
   }
 
-  public async getUsers(): Promise<AdminUsers> {
-    return { users: await this.getUsersWithAnalytics() };
+  public async getUsers({
+    skip,
+    take = Number.MAX_SAFE_INTEGER
+  }: {
+    skip?: number;
+    take?: number;
+  }): Promise<AdminUsers> {
+    return { users: await this.getUsersWithAnalytics({ skip, take }) };
   }
 
   public async patchAssetProfileData({
@@ -640,8 +646,14 @@ export class AdminService {
     return { marketData, count: marketData.length };
   }
 
-  private async getUsersWithAnalytics(): Promise<AdminUsers['users']> {
-    let orderBy: any = {
+  private async getUsersWithAnalytics({
+    skip,
+    take
+  }: {
+    skip?: number;
+    take?: number;
+  }): Promise<AdminUsers['users']> {
+    let orderBy: Prisma.UserOrderByWithRelationInput = {
       createdAt: 'desc'
     };
     let where: Prisma.UserWhereInput;
@@ -649,7 +661,7 @@ export class AdminService {
     if (this.configurationService.get('ENABLE_FEATURE_SUBSCRIPTION')) {
       orderBy = {
         Analytics: {
-          updatedAt: 'desc'
+          lastRequestAt: 'desc'
         }
       };
       where = {
@@ -661,6 +673,8 @@ export class AdminService {
 
     const usersWithAnalytics = await this.prismaService.user.findMany({
       orderBy,
+      skip,
+      take,
       where,
       select: {
         _count: {
@@ -677,8 +691,7 @@ export class AdminService {
         id: true,
         role: true,
         Subscription: true
-      },
-      take: 30
+      }
     });
 
     return usersWithAnalytics.map(
